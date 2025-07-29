@@ -47,7 +47,7 @@ class StripeController extends Controller
             'line_items' => [
                 [
                     'price_data' => [
-                        'currency' => 'aed',
+                        'currency' => 'usd',
                         'product_data' => [
                             'name' => $booking->service->name
                         ],
@@ -107,7 +107,9 @@ class StripeController extends Controller
                 $booking = Booking::find($booking_id);
                 if ($booking) {
                     $booking->update(['payment_status' => 'paid']);
-                    return redirect($frontendUrl . '/payment/success');
+                    //here i will send the user
+                    $email = $booking->user->email;
+                    return redirect($frontendUrl . "/payment/success");
                 } else {
                     return redirect($frontendUrl . '/payment/canceled');
                 }

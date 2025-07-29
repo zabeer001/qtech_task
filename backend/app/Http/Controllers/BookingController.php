@@ -143,7 +143,7 @@ class BookingController extends Controller
     public function show($uniq_id)
     {
         try {
-            $booking = Booking::with('service')
+            $booking = Booking::with(['service','user'])
                 ->where('uniq_id', $uniq_id)
                 ->firstOrFail();
 
