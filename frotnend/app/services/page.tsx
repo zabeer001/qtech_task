@@ -61,6 +61,7 @@ import {
   Star,
   Clock,
 } from "lucide-react"
+import { handleLogout } from "@/utils/auth"
 
 const sidebarItems = [
   { title: "Dashboard", url: "/", icon: Home },
@@ -223,7 +224,7 @@ export default function ServicesPage() {
                 <DropdownMenuItem>Profile</DropdownMenuItem>
                 <DropdownMenuItem>Settings</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>Log out</DropdownMenuItem>
+                <DropdownMenuItem onClick={()=>handleLogout()}>Log out</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

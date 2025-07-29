@@ -67,6 +67,7 @@ import {
   MapPin,
   Filter,
 } from "lucide-react"
+import { BACKEND_URL } from "@/config"
 
 const sidebarItems = [
   { title: "Dashboard", url: "/", icon: Home },
@@ -78,6 +79,38 @@ const sidebarItems = [
   { title: "Reports", url: "/reports", icon: BookOpen },
   { title: "Settings", url: "/settings", icon: Settings },
 ]
+
+async function handleLogout() {
+  try {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      console.warn("No token found.");
+      return;
+    }
+
+    const res = await fetch(`${BACKEND_URL}/api/logout`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.message || "Logout failed");
+    }
+
+    // Clear token and redirect
+    localStorage.removeItem("token");
+    alert("Logged out successfully!");
+    window.location.href = "/login"; // or use router.push("/login")
+  } catch (error) {
+    console.error("Logout error:", error);
+  }
+}
 
 function AppSidebar() {
   return (
@@ -278,7 +311,7 @@ export default function BookingsPage() {
                 <DropdownMenuItem>Profile</DropdownMenuItem>
                 <DropdownMenuItem>Settings</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>Log out</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout}>Log out</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

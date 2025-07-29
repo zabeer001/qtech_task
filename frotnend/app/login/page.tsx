@@ -8,8 +8,55 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
 import { Calendar, Eye, EyeOff, Mail, Lock, User, Building } from "lucide-react"
+import { BACKEND_URL } from "@/config"
+import { useRouter } from "next/navigation"
 
 export default function LoginPage() {
+  const loginApi = BACKEND_URL + "/api/login"
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+
+
+
+  async function handleLogin() {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch(loginApi, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Login failed");
+      }
+
+      const data = await res.json();
+      console.log("Login success:", data);
+
+      // Save token to localStorage if Laravel returns it
+      localStorage.setItem("token", data?.token);
+
+      // Optionally redirect or show success
+      alert("Login successful!");
+      router.push("/"); 
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const [showPassword, setShowPassword] = useState(false)
 
   return (
@@ -42,7 +89,13 @@ export default function LoginPage() {
                   <Label htmlFor="email">Email</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input id="email" type="email" placeholder="john@example.com" className="pl-10" />
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="john@example.com"
+                      className="pl-10"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)} />
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -54,6 +107,8 @@ export default function LoginPage() {
                       type={showPassword ? "text" : "password"}
                       placeholder="Enter your password"
                       className="pl-10 pr-10"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
                     />
                     <Button
                       type="button"
@@ -77,7 +132,9 @@ export default function LoginPage() {
                     Forgot password?
                   </Button>
                 </div>
-                <Button className="w-full">Sign In</Button>
+                <Button className="w-full" onClick={handleLogin} disabled={loading}>
+                  {loading ? "Signing in..." : "Sign In"}
+                </Button>
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
                     <Separator className="w-full" />

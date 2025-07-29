@@ -63,6 +63,7 @@ import {
   Package2,
   ShoppingCart,
 } from "lucide-react"
+import { handleLogout } from "@/utils/auth"
 
 const sidebarItems = [
   { title: "Dashboard", url: "/", icon: Home },
@@ -280,7 +281,7 @@ export default function InventoryPage() {
                 <DropdownMenuItem>Profile</DropdownMenuItem>
                 <DropdownMenuItem>Settings</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>Log out</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleLogout()}>Log out</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -289,7 +290,7 @@ export default function InventoryPage() {
         <main className="flex-1 space-y-6 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Inventory</h1>
+              <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
               <p className="text-muted-foreground">Manage stock levels, suppliers, and inventory alerts</p>
             </div>
             <Dialog>

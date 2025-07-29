@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -36,80 +37,10 @@ import {
   X,
 } from "lucide-react"
 
-const services = [
-  {
-    id: 1,
-    name: "Premium Car Wash",
-    description: "Complete exterior and interior car cleaning with premium products and attention to detail.",
-    price: 89.99,
-    duration: 120,
-    category: "Automotive",
-    rating: 4.8,
-    reviews: 145,
-    image: "/placeholder.svg?height=200&width=300",
-    features: ["Exterior wash", "Interior cleaning", "Tire shine", "Dashboard polish"],
-  },
-  {
-    id: 2,
-    name: "Home Deep Cleaning",
-    description: "Professional residential cleaning service for your entire home with eco-friendly products.",
-    price: 149.99,
-    duration: 180,
-    category: "Cleaning",
-    rating: 4.9,
-    reviews: 98,
-    image: "/placeholder.svg?height=200&width=300",
-    features: ["All rooms", "Kitchen deep clean", "Bathroom sanitization", "Eco-friendly products"],
-  },
-  {
-    id: 3,
-    name: "Garden Maintenance",
-    description: "Complete garden care including pruning, weeding, and seasonal maintenance.",
-    price: 199.99,
-    duration: 240,
-    category: "Landscaping",
-    rating: 4.7,
-    reviews: 76,
-    image: "/placeholder.svg?height=200&width=300",
-    features: ["Pruning & trimming", "Weed removal", "Lawn care", "Seasonal cleanup"],
-  },
-  {
-    id: 4,
-    name: "Pet Grooming",
-    description: "Professional pet grooming service with experienced handlers and premium care.",
-    price: 79.99,
-    duration: 90,
-    category: "Pet Care",
-    rating: 4.6,
-    reviews: 54,
-    image: "/placeholder.svg?height=200&width=300",
-    features: ["Bath & dry", "Nail trimming", "Ear cleaning", "Brush & style"],
-  },
-  {
-    id: 5,
-    name: "Appliance Repair",
-    description: "Expert repair service for all household appliances with warranty guarantee.",
-    price: 120.0,
-    duration: 150,
-    category: "Maintenance",
-    rating: 4.5,
-    reviews: 89,
-    image: "/placeholder.svg?height=200&width=300",
-    features: ["Diagnosis", "Parts replacement", "90-day warranty", "Emergency service"],
-  },
-  {
-    id: 6,
-    name: "Personal Training",
-    description: "One-on-one fitness training sessions with certified personal trainers.",
-    price: 95.0,
-    duration: 60,
-    category: "Fitness",
-    rating: 4.9,
-    reviews: 112,
-    image: "/placeholder.svg?height=200&width=300",
-    features: ["Custom workout plan", "Nutrition guidance", "Progress tracking", "Flexible scheduling"],
-  },
-]
+import Link from "next/link"
+import { BACKEND_URL } from '../config';
+
+
 
 const testimonials = [
   {
@@ -136,20 +67,47 @@ const testimonials = [
 ]
 
 export default function Homepage() {
-  const [selectedCategory, setSelectedCategory] = useState("All")
-  const [searchQuery, setSearchQuery] = useState("")
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [selectedService, setSelectedService] = useState<(typeof services)[0] | null>(null)
+  const [services, setServices] = useState<any[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [selectedService, setSelectedService] = useState<any | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  const categories = ["All", ...new Set(services.map((service) => service.category))]
+  useEffect(() => {
+    // Check if the token exists in localStorage
+    const token = localStorage.getItem("token");
+    if (token) {
+      setIsLoggedIn(true);
+    }
+  }, []);
 
-  const filteredServices = services.filter((service) => {
-    const matchesCategory = selectedCategory === "All" || service.category === selectedCategory
-    const matchesSearch =
-      service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      service.description.toLowerCase().includes(searchQuery.toLowerCase())
-    return matchesCategory && matchesSearch
-  })
+  // Fetch services on mount
+  useEffect(() => {
+    async function fetchServices() {
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/services?paginate_count=9`);
+        if (!res.ok) throw new Error("Failed to fetch services");
+        const json = await res.json();
+        const services = json.data?.data || [];
+        setServices(services);
+      } catch (error) {
+        console.error("Error fetching services:", error);
+        setServices([]);
+      }
+    }
+    fetchServices();
+  }, []);
+
+  // const categories = ["All", ...new Set(services.map((service) => service.category))];
+
+  // const filteredServices = services.filter((service) => {
+  //   const matchesCategory = selectedCategory === "All" || service.category === selectedCategory
+  //   const matchesSearch =
+  //     service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  //     service.description.toLowerCase().includes(searchQuery.toLowerCase())
+  //   return matchesCategory && matchesSearch
+  // })
 
   return (
     <div className="min-h-screen bg-white">
@@ -182,11 +140,18 @@ export default function Homepage() {
               </a>
             </nav>
 
-            <div className="hidden md:flex items-center space-x-4">
-              <Button variant="outline">Sign In</Button>
-              <Button>Get Started</Button>
-            </div>
 
+            <div className="hidden md:flex items-center space-x-4">
+              {isLoggedIn ? (
+                <Link href="/dashboard">
+                  <Button>Dashboard</Button>
+                </Link>
+              ) : (
+                <Link href="/login">
+                  <Button>Sign In</Button>
+                </Link>
+              )}
+            </div>
             {/* Mobile menu button */}
             <div className="md:hidden">
               <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
@@ -294,7 +259,7 @@ export default function Homepage() {
               />
             </div>
             <div className="flex gap-2 overflow-x-auto">
-              {categories.map((category) => (
+              {/* {categories.map((category) => (
                 <Button
                   key={category}
                   variant={selectedCategory === category ? "default" : "outline"}
@@ -303,17 +268,17 @@ export default function Homepage() {
                 >
                   {category}
                 </Button>
-              ))}
+              ))} */}
             </div>
           </div>
 
           {/* Services Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredServices.map((service) => (
+            {services.map((service) => (
               <Card key={service.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                 <div className="aspect-video relative">
                   <img
-                    src={service.image || "/placeholder.svg"}
+                    src={service?.image || "/placeholder.svg"}
                     alt={service.name}
                     className="w-full h-full object-cover"
                   />
@@ -333,21 +298,21 @@ export default function Homepage() {
                   <div className="flex items-center gap-2">
                     <div className="flex items-center">
                       <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                      <span className="ml-1 text-sm font-medium">{service.rating}</span>
+                      <span className="ml-1 text-sm font-medium">{service?.rating}</span>
                     </div>
-                    <span className="text-sm text-gray-500">({service.reviews} reviews)</span>
+                    <span className="text-sm text-gray-500">({service?.reviews} reviews)</span>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <CardDescription className="mb-4">{service.description}</CardDescription>
-                  <div className="space-y-2 mb-4">
+                  <CardDescription className="mb-4">{service?.description}</CardDescription>
+                  {/* <div className="space-y-2 mb-4">
                     {service.features.map((feature, index) => (
                       <div key={index} className="flex items-center text-sm">
                         <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
                         {feature}
                       </div>
                     ))}
-                  </div>
+                  </div> */}
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button className="w-full" onClick={() => setSelectedService(service)}>
