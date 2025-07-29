@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Order;
+use App\Models\Booking;
 use Illuminate\Http\Request;
 use Stripe\Checkout\Session;
 use Stripe\Stripe;
+use Tymon\JWTAuth\Exceptions\JWTException;
+use Tymon\JWTAuth\Facades\JWTAuth;
+use Symfony\Component\HttpFoundation\Response;
 
 class StripeController extends Controller
 {
@@ -18,11 +21,26 @@ class StripeController extends Controller
     {
         // Validate request data
         $request->validate([
-            'order_id' => 'required|exists:orders,id',
-            'email' => 'required|email',
+            'booking_id' => 'required|exists:bookings,id',
+
         ]);
 
-        $order = Order::findOrFail($request->order_id);
+        $user = null;
+        try {
+            if (JWTAuth::getToken()) {
+                $user = JWTAuth::parseToken()->authenticate();
+            }
+        } catch (JWTException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Token is invalid or expired.',
+            ], Response::HTTP_UNAUTHORIZED);
+        }
+        $email = $user->email;
+
+
+
+        $booking = Booking::with('service')->findOrFail($request->booking_id);
 
         // Create Stripe Checkout session
         $session = Session::create([
@@ -31,9 +49,9 @@ class StripeController extends Controller
                     'price_data' => [
                         'currency' => 'aed',
                         'product_data' => [
-                            'name' => 'Product'
+                            'name' => $booking->service->name
                         ],
-                        'unit_amount' => round((float) $order->total * 100),
+                        'unit_amount' => round((float) $booking->service->price * 100),
                     ],
                     'quantity' => 1
                 ]
@@ -41,51 +59,21 @@ class StripeController extends Controller
             'mode' => 'payment',
             'success_url' => route('stripe.success') . '?session_id={CHECKOUT_SESSION_ID}',
             'cancel_url' => route('stripe.cancel'),
-            'customer_email' => $request->email, // Add customer email
-            'metadata' => [ // Add order_id to metadata
-                'order_id' => $order->id
+            'customer_email' => $email,
+            'metadata' => [
+                'booking_id' => $booking->id
             ]
-
         ]);
 
-        // Save the session ID to the order
-        $order->update(['session_id' => $session->id]);
+        // Save the session ID to the booking
+        $booking->update(['session_id' => $session->id]);
 
+        // Return the checkout URL in the response
         return response()->json([
             'status' => 'success',
             'checkout_url' => $session->url
         ]);
     }
-
-    // public function webhook(Request $request)
-    // {
-    //     $payload = $request->getContent();
-    //     $sig_header = $request->header('Stripe-Signature');
-    //     $endpoint_secret = env('STRIPE_WEBHOOK_SECRET');
-
-    //     try {
-    //         $event = \Stripe\Webhook::constructEvent(
-    //             $payload, $sig_header, $endpoint_secret
-    //         );
-    //     } catch (\UnexpectedValueException $e) {
-    //         return response()->json(['error' => 'Invalid payload'], 400);
-    //     } catch (\Stripe\Exception\SignatureVerificationException $e) {
-    //         return response()->json(['error' => 'Invalid signature'], 400);
-    //     }
-
-    //     // Handle the checkout.session.completed event
-    //     if ($event->type == 'checkout.session.completed') {
-    //         $session = $event->data->object;
-
-    //         // Update order status
-    //         $order = Order::where('session_id', $session->id)->first();
-    //         if ($order) {
-    //             $order->update(['payment_status' => 'paid']);
-    //         }
-    //     }
-
-    //     return response()->json(['status' => 'success']);
-    // }
 
     public function checkPaymentStatus(Request $request)
     {
@@ -97,10 +85,9 @@ class StripeController extends Controller
 
         return response()->json([
             'payment_status' => $session->payment_status,
-            'order_status' => $session->payment_status === 'paid' ? 'completed' : 'pending'
+            'booking_status' => $session->payment_status === 'paid' ? 'completed' : 'pending'
         ]);
     }
-
 
     public function checkoutSuccess(Request $request)
     {
@@ -113,13 +100,13 @@ class StripeController extends Controller
 
         try {
             $checkoutSession = Session::retrieve($sessionId);
-            $orderId = $checkoutSession->metadata->order_id;
-            $order_id = (int) $orderId;
+            $bookingId = $checkoutSession->metadata->booking_id;
+            $booking_id = (int) $bookingId;
 
             if ($checkoutSession->payment_status === 'paid') {
-                $order = Order::find($order_id);
-                if ($order) {
-                    $order->update(['payment_status' => 'paid']);
+                $booking = Booking::find($booking_id);
+                if ($booking) {
+                    $booking->update(['payment_status' => 'paid']);
                     return redirect($frontendUrl . '/payment/success');
                 } else {
                     return redirect($frontendUrl . '/payment/canceled');
@@ -132,7 +119,6 @@ class StripeController extends Controller
         }
     }
 
-    
     public function checkoutCancel()
     {
         $frontendUrl = env('FRONTEND_URL');
