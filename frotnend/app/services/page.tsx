@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   Sidebar,
   SidebarContent,
@@ -62,6 +62,13 @@ import {
   Clock,
 } from "lucide-react"
 import { handleLogout } from "@/utils/auth"
+import { BACKEND_URL } from "@/config"
+import { toast } from "sonner";
+import { EditServiceDialog } from "./EditServiceDialog"
+
+
+
+
 
 const sidebarItems = [
   { title: "Dashboard", url: "/", icon: Home },
@@ -74,7 +81,12 @@ const sidebarItems = [
   { title: "Settings", url: "/settings", icon: Settings },
 ]
 
+
+
 function AppSidebar() {
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+
+
   return (
     <Sidebar>
       <SidebarHeader>
@@ -143,52 +155,110 @@ function AppSidebar() {
 }
 
 export default function ServicesPage() {
-  const [services, setServices] = useState([
-    {
-      id: 1,
-      name: "Premium Car Wash",
-      description: "Complete exterior and interior car cleaning service",
-      price: 89.99,
-      duration: 120,
-      category: "Automotive",
-      status: "active",
-      rating: 4.8,
-      bookings: 145,
-    },
-    {
-      id: 2,
-      name: "Home Cleaning",
-      description: "Professional residential cleaning service",
-      price: 149.99,
-      duration: 180,
-      category: "Cleaning",
-      status: "active",
-      rating: 4.9,
-      bookings: 98,
-    },
-    {
-      id: 3,
-      name: "Garden Maintenance",
-      description: "Complete garden care and landscaping",
-      price: 199.99,
-      duration: 240,
-      category: "Landscaping",
-      status: "active",
-      rating: 4.7,
-      bookings: 76,
-    },
-    {
-      id: 4,
-      name: "Pet Grooming",
-      description: "Professional pet grooming and care",
-      price: 79.99,
-      duration: 90,
-      category: "Pet Care",
-      status: "inactive",
-      rating: 4.6,
-      bookings: 54,
-    },
-  ])
+  const [services, setServices] = useState<any[]>([]);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [price, setPrice] = useState("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [serviceToEdit, setServiceToEdit] = useState<any | null>(null);
+
+  function openEditDialog(service: any) {
+    setServiceToEdit(service);
+    setIsEditDialogOpen(true);
+  }
+
+
+  // Define fetchServices inside the component
+  async function fetchServices() {
+    try {
+      const res = await fetch(`${BACKEND_URL}api/services?paginate_count=9`);
+      if (!res.ok) throw new Error("Failed to fetch services");
+      const json = await res.json();
+      const services = json.data?.data || [];
+      setServices(services);
+    } catch (error) {
+      console.error("Error fetching services:", error);
+      setServices([]);
+    }
+  }
+  // Define openEditDialog inside the component
+
+
+  // Define createService inside the component
+  async function createService(formData: FormData) {
+    try {
+      const token = localStorage.getItem("token");
+      console.log(token);
+
+      const res = await fetch(`${BACKEND_URL}api/services`, {
+        method: "POST",
+        headers: {
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+        body: formData,
+      });
+
+      if (!res.ok) {
+        // Read response text (not json) to see error page or message
+        const text = await res.text();
+        console.error("Create service failed response text:", text);
+        throw new Error(`Failed to create service, status: ${res.status}`);
+      }
+
+      return await res.json();
+    } catch (error) {
+      console.error("Create service error:", error);
+      throw error;
+    }
+  }
+
+
+  useEffect(() => {
+    fetchServices();
+  }, []);
+
+  async function handleCreateService() {
+    try {
+      const formData = new FormData();
+      formData.append("name", name);
+      formData.append("description", description);
+      formData.append("price", price);
+      if (selectedImage) formData.append("image", selectedImage);
+
+      for (const [key, value] of formData.entries()) {
+        if (value instanceof File) {
+          console.log(key, value.name, value.size, value.type);
+        } else {
+          console.log(key, value);
+        }
+      }
+
+      const response = await createService(formData);
+      console.log("Service Created:", response);
+      if (response.success) {
+        toast.success(response.message || "Service created successfully!");
+
+        await fetchServices();
+      } else {
+        toast.error(response.message || "Failed to create service");
+      }
+
+      setName("");
+      setDescription("");
+      setPrice("");
+      setSelectedImage(null);
+
+      // Close the dialog
+      setIsDialogOpen(false);
+
+
+      await fetchServices();
+    } catch (err) {
+      console.error("Error creating service:", err);
+    }
+  }
 
   return (
     <SidebarProvider>
@@ -224,7 +294,7 @@ export default function ServicesPage() {
                 <DropdownMenuItem>Profile</DropdownMenuItem>
                 <DropdownMenuItem>Settings</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={()=>handleLogout()}>Log out</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleLogout()}>Log out</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -236,9 +306,9 @@ export default function ServicesPage() {
               <h1 className="text-3xl font-bold tracking-tight">Services</h1>
               <p className="text-muted-foreground">Manage your service offerings and pricing</p>
             </div>
-            <Dialog>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button>
+                <Button onClick={() => setIsDialogOpen(true)}>
                   <Plus className="mr-2 h-4 w-4" />
                   Add Service
                 </Button>
@@ -253,48 +323,70 @@ export default function ServicesPage() {
                     <Label htmlFor="name" className="text-right">
                       Name
                     </Label>
-                    <Input id="name" placeholder="Service name" className="col-span-3" />
+                    <Input
+                      id="name"
+                      placeholder="Service name"
+                      className="col-span-3"
+                      value={name}
+                      onChange={e => setName(e.target.value)}
+                    />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="description" className="text-right">
                       Description
                     </Label>
-                    <Textarea id="description" placeholder="Service description" className="col-span-3" />
+                    <Textarea
+                      id="description"
+                      placeholder="Service description"
+                      className="col-span-3"
+                      value={description}
+                      onChange={e => setDescription(e.target.value)}
+                    />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="price" className="text-right">
                       Price
                     </Label>
-                    <Input id="price" type="number" placeholder="0.00" className="col-span-3" />
+                    <Input
+                      id="price"
+                      type="number"
+                      placeholder="0.00"
+                      className="col-span-3"
+                      value={price}
+                      onChange={e => setPrice(e.target.value)}
+                    />
                   </div>
+
+                  {/* Image Upload */}
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="duration" className="text-right">
-                      Duration
+                    <Label htmlFor="image" className="text-right">
+                      Image
                     </Label>
-                    <Input id="duration" type="number" placeholder="Minutes" className="col-span-3" />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="category" className="text-right">
-                      Category
-                    </Label>
-                    <Select>
-                      <SelectTrigger className="col-span-3">
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="automotive">Automotive</SelectItem>
-                        <SelectItem value="cleaning">Cleaning</SelectItem>
-                        <SelectItem value="landscaping">Landscaping</SelectItem>
-                        <SelectItem value="petcare">Pet Care</SelectItem>
-                        <SelectItem value="maintenance">Maintenance</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="col-span-3">
+                      <Input
+                        id="image"
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          if (e.target.files?.[0]) setSelectedImage(e.target.files[0]);
+                        }}
+                      />
+                      {/* Preview */}
+                      {selectedImage && (
+                        <img
+                          src={URL.createObjectURL(selectedImage)}
+                          alt="Preview"
+                          className="mt-2 h-24 w-24 rounded object-cover border"
+                        />
+                      )}
+                    </div>
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button type="submit">Create Service</Button>
+                  <Button onClick={handleCreateService}>Create Service</Button>
                 </DialogFooter>
               </DialogContent>
+
             </Dialog>
           </div>
 
@@ -328,7 +420,7 @@ export default function ServicesPage() {
                 <Calendar className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{services.reduce((sum, service) => sum + service.bookings, 0)}</div>
+                <div className="text-2xl font-bold">123</div>
                 <p className="text-xs text-muted-foreground">This month</p>
               </CardContent>
             </Card>
@@ -357,12 +449,12 @@ export default function ServicesPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Service</TableHead>
-                    <TableHead>Category</TableHead>
+
                     <TableHead>Price</TableHead>
-                    <TableHead>Duration</TableHead>
-                    <TableHead>Rating</TableHead>
-                    <TableHead>Bookings</TableHead>
+
+
                     <TableHead>Status</TableHead>
+                    <TableHead>Image</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -375,26 +467,24 @@ export default function ServicesPage() {
                           <div className="text-sm text-muted-foreground">{service.description}</div>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{service.category}</Badge>
-                      </TableCell>
                       <TableCell>${service.price}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center">
-                          <Clock className="mr-1 h-3 w-3" />
-                          {service.duration}m
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center">
-                          <Star className="mr-1 h-3 w-3 fill-yellow-400 text-yellow-400" />
-                          {service.rating}
-                        </div>
-                      </TableCell>
-                      <TableCell>{service.bookings}</TableCell>
+
+
+
+
+
                       <TableCell>
                         <Badge variant={service.status === "active" ? "default" : "secondary"}>{service.status}</Badge>
                       </TableCell>
+
+                      <TableCell>
+                        <img
+                          src={service?.image ? `${BACKEND_URL}${service.image}` : "/placeholder.svg"}
+                          alt={service.name}
+                          className="w-12 h-12 object-cover rounded"
+                        />
+                      </TableCell>
+
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -403,9 +493,10 @@ export default function ServicesPage() {
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
+
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openEditDialog(service)}>
                               <Edit className="mr-2 h-4 w-4" />
                               Edit
                             </DropdownMenuItem>
@@ -418,12 +509,22 @@ export default function ServicesPage() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
+
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </CardContent>
           </Card>
+
+          {isEditDialogOpen && (
+            <EditServiceDialog
+              open={isEditDialogOpen}
+              onOpenChange={setIsEditDialogOpen}
+              service={serviceToEdit}
+              onSave={() => {}} // Not used in your dialog, but required by props
+            />
+          )}
         </main>
       </SidebarInset>
     </SidebarProvider>
