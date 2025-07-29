@@ -12,7 +12,7 @@ import { BACKEND_URL } from "@/config"
 import { useRouter } from "next/navigation"
 
 export default function LoginPage() {
-  const loginApi = BACKEND_URL + "/api/login"
+  const loginApi = BACKEND_URL + "api/login"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);

@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('name'); // Name of the service
             $table->text('description')->nullable(); // Description of the service
             $table->decimal('price', 10, 2); // Price with 2 decimal points
+            $table->string('image')->nullable(); // Image URL for the service
             $table->string('status')->default('active'); // Active/Inactive status
             $table->timestamps();
         });

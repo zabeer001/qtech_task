@@ -17,14 +17,18 @@ class BookingController extends Controller
         $this->middleware(['auth:api', 'admin'])->only(['store', 'update', 'destroy']);
     }
 
-    protected array $typeOfFields = ['textFields'];
+    protected array $typeOfFields = ['textFields','numericFields'];
 
     protected array $textFields = [
-        'service_id',
         'booking_date',
         'status',
         'payment_status',
     ];
+
+    protected array $numericFields = [
+        'service_id',
+    ];
+
 
     protected function validateRequest(Request $request)
     {
@@ -121,6 +125,7 @@ class BookingController extends Controller
                 $this->typeOfFields,
                 [
                     'textFields' => $this->textFields,
+                    'numericFields' => $this->numericFields,
                 ]
             );
 
@@ -170,6 +175,7 @@ class BookingController extends Controller
                 $this->typeOfFields,
                 [
                     'textFields' => $this->textFields,
+                    'numericFields' => $this->numericFields,
                 ]
             );
 

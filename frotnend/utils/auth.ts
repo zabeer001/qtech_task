@@ -9,7 +9,7 @@ export async function handleLogout(redirect = true) {
       return;
     }
 
-    const res = await fetch(`${BACKEND_URL}/api/logout`, {
+    const res = await fetch(`${BACKEND_URL}api/logout`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

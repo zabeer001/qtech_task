@@ -86,7 +86,7 @@ export default function Homepage() {
   useEffect(() => {
     async function fetchServices() {
       try {
-        const res = await fetch(`${BACKEND_URL}/api/services?paginate_count=9`);
+        const res = await fetch(`${BACKEND_URL}api/services?paginate_count=9`);
         if (!res.ok) throw new Error("Failed to fetch services");
         const json = await res.json();
         const services = json.data?.data || [];
@@ -278,7 +278,7 @@ export default function Homepage() {
               <Card key={service.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                 <div className="aspect-video relative">
                   <img
-                    src={service?.image || "/placeholder.svg"}
+                   src={(service?.image ? BACKEND_URL + service.image : "/placeholder.svg")}
                     alt={service.name}
                     className="w-full h-full object-cover"
                   />

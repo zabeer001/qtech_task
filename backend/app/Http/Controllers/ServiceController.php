@@ -15,14 +15,20 @@ class ServiceController extends Controller
         $this->middleware(['auth:api', 'admin'])->only(['store', 'update', 'destroy']);
     }
 
-    protected array $typeOfFields = ['textFields'];
+    protected array $typeOfFields = ['textFields', 'numericFields', 'imageFields'];
 
     protected array $textFields = [
         'name',
         'description',
-        'price',
         'status',
     ];
+    protected array $numericFields = [
+        'price',
+    ];
+    protected array $imageFields = [
+        'image'
+    ];
+
 
     /**
      * Validate the request data for service creation or update.
@@ -37,6 +43,7 @@ class ServiceController extends Controller
             'description' => 'nullable|string',
             'status' => 'nullable|string',
             'price' => 'nullable|numeric|min:0',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Optional image validation
         ]);
     }
 
@@ -68,6 +75,8 @@ class ServiceController extends Controller
             if ($status) {
                 $query->where('status', $status);
             }
+
+             $query->orderBy('created_at', 'desc');
 
             $services = $query->paginate($paginate_count);
 
@@ -105,6 +114,8 @@ class ServiceController extends Controller
                 $this->typeOfFields,
                 [
                     'textFields' => $this->textFields,
+                    'numericFields' => $this->numericFields,
+                    'imageFields' => $this->imageFields,
                 ]
             );
 
@@ -160,6 +171,8 @@ class ServiceController extends Controller
                 $this->typeOfFields,
                 [
                     'textFields' => $this->textFields,
+                    'numericFields' => $this->numericFields,
+                    'imageFields' => $this->imageFields,
                 ]
             );
 
