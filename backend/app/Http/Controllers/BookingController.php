@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Helpers\HelperMethods;
 use App\Models\Booking;
+use Illuminate\Support\Facades\Mail;
 use Symfony\Component\HttpFoundation\Response;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Tymon\JWTAuth\Facades\JWTAuth;
@@ -127,7 +128,6 @@ class BookingController extends Controller
 
             $data->uniq_id = HelperMethods::generateUniqueId();
             $data->user_id = $user->id; // Set user_id if authenticated
-
             $data->save();
 
             return response()->json([
@@ -197,6 +197,28 @@ class BookingController extends Controller
             ], Response::HTTP_OK);
         } catch (\Exception $e) {
             return HelperMethods::handleException($e, 'Failed to delete booking.');
+        }
+    }
+
+     public function udpateStatus(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'id'     => 'required|integer|exists:services,id',
+                'status' => 'required|string',
+            ]);
+
+            $data = Booking::findOrFail($validated['id']);
+            $data->status = $validated['status'];
+            $data->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'data status updated successfully.',
+                'data'    => $data,
+            ], Response::HTTP_OK);
+        } catch (\Exception $e) {
+            return HelperMethods::handleException($e, 'Failed to update service status.');
         }
     }
 }

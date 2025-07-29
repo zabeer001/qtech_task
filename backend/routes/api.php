@@ -53,7 +53,10 @@ Route::post('google/auth/jwt-process', [GoogleController::class, 'process']);
 
 //categories
 Route::apiResource('services', ServiceController::class);
+Route::post('services/status-update', [ServiceController::class, 'udpateStatus']);
+
 Route::apiResource('bookings', BookingController::class);
+Route::post('bookings/status-update', [BookingController::class, 'udpateStatus']);
 
 
 

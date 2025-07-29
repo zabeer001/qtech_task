@@ -195,4 +195,26 @@ class ServiceController extends Controller
             return HelperMethods::handleException($e, 'Failed to delete service.');
         }
     }
+
+    public function udpateStatus(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'id'     => 'required|integer|exists:services,id',
+                'status' => 'required|string',
+            ]);
+
+            $service = Service::findOrFail($validated['id']);
+            $service->status = $validated['status'];
+            $service->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Service status updated successfully.',
+                'data'    => $service,
+            ], Response::HTTP_OK);
+        } catch (\Exception $e) {
+            return HelperMethods::handleException($e, 'Failed to update service status.');
+        }
+    }
 }
