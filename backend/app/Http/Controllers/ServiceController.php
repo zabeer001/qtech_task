@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Category;
 use Illuminate\Http\Request;
 use App\Helpers\HelperMethods;
 use App\Models\Service;
@@ -13,9 +12,10 @@ class ServiceController extends Controller
     public function __construct()
     {
         // Apply JWT authentication and admin middleware only to store, update, and destroy methods
-        $this->middleware(['auth:api', 'admin'])->only(['store', 'update']);
+        $this->middleware(['auth:api', 'admin'])->only(['store', 'update', 'destroy']);
     }
-    protected array $typeOfFields = ['textFields', 'imageFields'];
+
+    protected array $typeOfFields = ['textFields'];
 
     protected array $textFields = [
         'name',
@@ -24,10 +24,8 @@ class ServiceController extends Controller
         'status',
     ];
 
-
-
     /**
-     * Validate the request data for category creation or update.
+     * Validate the request data for service creation or update.
      *
      * @param Request $request
      * @return array
@@ -43,7 +41,7 @@ class ServiceController extends Controller
     }
 
     /**
-     * Display a listing of the resource.
+     * Display a listing of the services.
      *
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
@@ -65,19 +63,129 @@ class ServiceController extends Controller
                 $query->where('name', 'like', $search . '%');
             }
 
-            $categories = $query->paginate($paginate_count);
+            $services = $query->paginate($paginate_count);
 
             return response()->json([
                 'success' => true,
-                'data' => $categories,
-                'current_page' => $categories->currentPage(),
-                'total_pages' => $categories->lastPage(),
-                'per_page' => $categories->perPage(),
-                'total' => $categories->total(),
+                'data' => $services,
+                'current_page' => $services->currentPage(),
+                'total_pages' => $services->lastPage(),
+                'per_page' => $services->perPage(),
+                'total' => $services->total(),
             ], Response::HTTP_OK);
         } catch (\Exception $e) {
-            return HelperMethods::handleException($e, 'Failed to fetch categories.');
+            return HelperMethods::handleException($e, 'Failed to fetch services.');
         }
     }
 
+    /**
+     * Store a newly created service in storage.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function store(Request $request)
+    {
+        try {
+            $validated = $this->validateRequest($request);
+
+            $data = new Service();
+
+            HelperMethods::populateModelFields(
+                $data,
+                $request,
+                $validated,
+                $this->typeOfFields,
+                [
+                    'textFields' => $this->textFields,
+                ]
+            );
+
+            $data->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Service created successfully.',
+                'data' => $data,
+            ], Response::HTTP_CREATED);
+        } catch (\Exception $e) {
+            return HelperMethods::handleException($e, 'Failed to create service.');
+        }
+    }
+
+    /**
+     * Display the specified service.
+     *
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function show($id)
+    {
+        try {
+            $service = Service::findOrFail($id);
+            return response()->json([
+                'success' => true,
+                'data' => $service,
+            ], Response::HTTP_OK);
+        } catch (\Exception $e) {
+            return HelperMethods::handleException($e, 'Service not found.');
+        }
+    }
+
+    /**
+     * Update the specified service in storage.
+     *
+     * @param Request $request
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function update(Request $request, $id)
+    {
+        try {
+            $validated = $this->validateRequest($request);
+
+            $data = Service::findOrFail($id);
+
+            HelperMethods::populateModelFields(
+                $data,
+                $request,
+                $validated,
+                $this->typeOfFields,
+                [
+                    'textFields' => $this->textFields,
+                ]
+            );
+
+            $data->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Service updated successfully.',
+                'data' => $data,
+            ], Response::HTTP_OK);
+        } catch (\Exception $e) {
+            return HelperMethods::handleException($e, 'Failed to update service.');
+        }
+    }
+
+    /**
+     * Remove the specified service from storage.
+     *
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function destroy($id)
+    {
+        try {
+            $data = Service::findOrFail($id);
+            $data->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Service deleted successfully',
+            ], Response::HTTP_OK);
+        } catch (\Exception $e) {
+            return HelperMethods::handleException($e, 'Failed to delete service.');
+        }
+    }
 }
