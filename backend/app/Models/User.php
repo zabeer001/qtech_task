@@ -65,16 +65,16 @@ class User extends Authenticatable implements JWTSubject // <-- Implement JWTSub
         return [];
     }
 
-    public function reviews()
-    {
-        return $this->hasMany(Review::class);
-    }
-
+   
     public function sendPasswordResetNotification($token)
     {
         $frontendUrl = env('FRONTEND_URL');
         $url = $frontendUrl . '/reset-password/confirm?token=' . $token . '&email=' . urlencode($this->email);
         $this->notify(new ResetPasswordNotification($url));
     }
-    
+
+    public function bookings()
+    {
+        return $this->hasMany(Booking::class);
+    }
 }
