@@ -42,18 +42,22 @@ class BookingController extends Controller
     {
         try {
             $validated = $request->validate([
-                'paginate_count'     => 'nullable|integer|min:1',
-                'search'             => 'nullable|string|max:255',
+                'paginate_count'      => 'nullable|integer|min:1',
+                'search'              => 'nullable|string|max:255',
                 'filter_with_service' => 'nullable|string|max:255',
+                'status'              => 'nullable|string',
+                'payment_status'      => 'nullable|string',
             ]);
 
             $search = $validated['search'] ?? null;
             $paginate_count = $validated['paginate_count'] ?? 10;
             $filterWithService = $validated['filter_with_service'] ?? null;
+            $status = $validated['status'] ?? null;
+            $paymentStatus = $validated['payment_status'] ?? null;
 
             $query = Booking::with(['service:id,name'])->orderBy('updated_at', 'desc');
 
-            // Filter by uniq_id instead of name (if no name column)
+            // Filter by uniq_id
             if ($search) {
                 $query->where('uniq_id', 'like', $search . '%');
             }
@@ -63,6 +67,16 @@ class BookingController extends Controller
                 $query->whereHas('service', function ($q) use ($filterWithService) {
                     $q->where('name', 'like', $filterWithService . '%');
                 });
+            }
+
+            // Filter by booking status
+            if ($status) {
+                $query->where('status', $status);
+            }
+
+            // Filter by payment status
+            if ($paymentStatus) {
+                $query->where('payment_status', $paymentStatus);
             }
 
             $data = $query->paginate($paginate_count);

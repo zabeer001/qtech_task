@@ -51,10 +51,12 @@ class ServiceController extends Controller
         try {
             $validated = $request->validate([
                 'paginate_count' => 'nullable|integer|min:1',
-                'search' => 'nullable|string|max:255',
+                'search'         => 'nullable|string|max:255',
+                'status'         => 'nullable|string', // Optional validation
             ]);
 
             $search = $validated['search'] ?? null;
+            $status = $validated['status'] ?? null;
             $paginate_count = $validated['paginate_count'] ?? 10;
 
             $query = Service::query();
@@ -63,20 +65,25 @@ class ServiceController extends Controller
                 $query->where('name', 'like', $search . '%');
             }
 
+            if ($status) {
+                $query->where('status', $status);
+            }
+
             $services = $query->paginate($paginate_count);
 
             return response()->json([
-                'success' => true,
-                'data' => $services,
-                'current_page' => $services->currentPage(),
-                'total_pages' => $services->lastPage(),
-                'per_page' => $services->perPage(),
-                'total' => $services->total(),
+                'success'       => true,
+                'data'          => $services,
+                'current_page'  => $services->currentPage(),
+                'total_pages'   => $services->lastPage(),
+                'per_page'      => $services->perPage(),
+                'total'         => $services->total(),
             ], Response::HTTP_OK);
         } catch (\Exception $e) {
             return HelperMethods::handleException($e, 'Failed to fetch services.');
         }
     }
+
 
     /**
      * Store a newly created service in storage.
