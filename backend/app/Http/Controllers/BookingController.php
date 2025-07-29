@@ -51,33 +51,44 @@ class BookingController extends Controller
     public function index(Request $request)
     {
         try {
+            // Validate request parameters
             $validated = $request->validate([
-                'paginate_count' => 'nullable|integer|min:1',
-                'search' => 'nullable|string|max:255',
+                'paginate_count'     => 'nullable|integer|min:1',
+                'search'             => 'nullable|string|max:255',
+                'filter_with_service' => 'nullable|string|max:255', // New filter
             ]);
 
             $search = $validated['search'] ?? null;
             $paginate_count = $validated['paginate_count'] ?? 10;
+            $filterWithService = $validated['filter_with_service'] ?? null;
 
-           $query = Booking::with(['service:id,name'])->orderBy('updated_at', 'desc');
+            // Query with service relationship
+            $query = Booking::with(['service:id,name'])->orderBy('updated_at', 'desc');
 
+            // Filter by booking name (search)
             if ($search) {
                 $query->where('name', 'like', $search . '%');
             }
 
-            $categories = $query->paginate($paginate_count);
+            // Filter by service name
+            if ($filterWithService) {
+                $query->whereHas('service', function ($q) use ($filterWithService) {
+                    $q->where('name', 'like', $filterWithService . '%');
+                });
+            }
+
+            $data = $query->paginate($paginate_count);
 
             return response()->json([
-                'success' => true,
-                'data' => $categories,
-                'current_page' => $categories->currentPage(),
-                'total_pages' => $categories->lastPage(),
-                'per_page' => $categories->perPage(),
-                'total' => $categories->total(),
+                'success'       => true,
+                'data'          => $data,
+                'current_page'  => $data->currentPage(),
+                'total_pages'   => $data->lastPage(),
+                'per_page'      => $data->perPage(),
+                'total'         => $data->total(),
             ], Response::HTTP_OK);
         } catch (\Exception $e) {
-            return HelperMethods::handleException($e, 'Failed to fetch categories.');
+            return HelperMethods::handleException($e, 'Failed to fetch data.');
         }
     }
-
 }
