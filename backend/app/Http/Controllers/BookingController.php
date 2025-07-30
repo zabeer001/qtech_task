@@ -35,7 +35,7 @@ class BookingController extends Controller
     {
         return $request->validate([
             'service_id'     => 'required|integer|exists:services,id',
-            'booking_date'   => 'required',
+          'booking_date' => ['required', 'date', 'after_or_equal:today'],
             'status'         => 'nullable|string',
             'payment_status' => 'nullable|string',
         ]);

@@ -86,7 +86,7 @@ export default function Homepage() {
   useEffect(() => {
     async function fetchServices() {
       try {
-        const res = await fetch(`${BACKEND_URL}api/services?paginate_count=9`);
+        const res = await fetch(`${BACKEND_URL}api/services?paginate_count=9&status=active`);
         if (!res.ok) throw new Error("Failed to fetch services");
         const json = await res.json();
         const services = json.data?.data || [];
@@ -112,67 +112,67 @@ export default function Homepage() {
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
 
-const handleSubmit = async (service: any) => {
-  const token = localStorage.getItem("token");
-  const formattedBookingDate = `${selectedDate} ${selectedTime}:00`;
+  const handleSubmit = async (service: any) => {
+    const token = localStorage.getItem("token");
+    const formattedBookingDate = `${selectedDate} ${selectedTime}:00`;
 
-  const formData = {
-    service_id: service.id,
-    booking_date: formattedBookingDate,
-  };
+    const formData = {
+      service_id: service.id,
+      booking_date: formattedBookingDate,
+    };
 
-  console.log("Submitting booking with data:", formData);
+    console.log("Submitting booking with data:", formData);
 
-  try {
-    // Step 1: Create Booking (JSON)
-    const res = await fetch(`${BACKEND_URL}api/bookings`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(formData),
-    });
+    try {
+      // Step 1: Create Booking (JSON)
+      const res = await fetch(`${BACKEND_URL}api/bookings`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(formData),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (!res.ok) throw new Error(data.message || "Booking failed");
+      if (!res.ok) throw new Error(data.message || "Booking failed");
 
-    const bookingId = data?.data?.id || data?.booking?.id;
-    if (!bookingId) throw new Error("Booking ID not found");
+      const bookingId = data?.data?.id || data?.booking?.id;
+      if (!bookingId) throw new Error("Booking ID not found");
 
-    // Step 2: Prepare FormData for Stripe checkout
-    const checkoutFormData = new FormData();
-    checkoutFormData.append("booking_id", bookingId);
+      // Step 2: Prepare FormData for Stripe checkout
+      const checkoutFormData = new FormData();
+      checkoutFormData.append("booking_id", bookingId);
 
-    // Step 3: Call Stripe checkout endpoint with FormData
-    const stripeRes = await fetch(`${BACKEND_URL}api/stripe/checkout`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
-        // DO NOT set Content-Type here when using FormData
-      },
-      body: checkoutFormData,
-    });
+      // Step 3: Call Stripe checkout endpoint with FormData
+      const stripeRes = await fetch(`${BACKEND_URL}api/stripe/checkout`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+          // DO NOT set Content-Type here when using FormData
+        },
+        body: checkoutFormData,
+      });
 
-    const stripeData = await stripeRes.json();
+      const stripeData = await stripeRes.json();
 
-    if (!stripeRes.ok || !stripeData?.checkout_url) {
-      throw new Error(stripeData.message || "Failed to get Stripe checkout URL");
+      if (!stripeRes.ok || !stripeData?.checkout_url) {
+        throw new Error(stripeData.message || "Failed to get Stripe checkout URL");
+      }
+
+      console.log("Stripe checkout URL:", stripeData.checkout_url);
+
+      // Step 4: Redirect to Stripe checkout URL
+      window.location.href = stripeData.checkout_url;
+
+    } catch (error) {
+      console.error("Booking error:", error);
+      alert("Failed to book. Please try again.");
     }
-
-    console.log("Stripe checkout URL:", stripeData.checkout_url);
-
-    // Step 4: Redirect to Stripe checkout URL
-    window.location.href = stripeData.checkout_url;
-
-  } catch (error) {
-    console.error("Booking error:", error);
-    alert("Failed to book. Please try again.");
-  }
-};
+  };
 
 
 
@@ -406,6 +406,7 @@ const handleSubmit = async (service: any) => {
                               id="date"
                               type="date"
                               value={selectedDate}
+                              min={new Date().toISOString().split("T")[0]} // 🔒 Prevent past dates
                               onChange={(e) => setSelectedDate(e.target.value)}
                             />
                           </div>
