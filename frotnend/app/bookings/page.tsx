@@ -203,7 +203,7 @@ export default function BookingsPage() {
   const [serviceToEdit, setServiceToEdit] = useState<any | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [searchQuery, setSearchQuery] = useState("");
+   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebounce(searchQuery, 500);
 
 
@@ -492,7 +492,9 @@ export default function BookingsPage() {
                 <CardHeader>
                   <CardTitle>All Bookings</CardTitle>
                   <CardDescription>Complete list of customer bookings and appointments</CardDescription>
+                  
                 </CardHeader>
+
                 <CardContent>
                   <Table>
                     <TableHeader>

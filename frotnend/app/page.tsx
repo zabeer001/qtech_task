@@ -49,21 +49,21 @@ const testimonials = [
     service: "Home Deep Cleaning",
     rating: 5,
     comment: "Absolutely amazing service! My house has never been cleaner. The team was professional and thorough.",
-    avatar: "/placeholder.svg?height=40&width=40",
+    avatar: "/placeholder.svg",
   },
   {
     name: "Mike Chen",
     service: "Premium Car Wash",
     rating: 5,
     comment: "My car looks brand new! Great attention to detail and excellent customer service.",
-    avatar: "/placeholder.svg?height=40&width=40",
+    avatar: "/placeholder.svg",
   },
   {
     name: "Emily Davis",
     service: "Pet Grooming",
     rating: 5,
     comment: "They took such good care of my dog. Professional, gentle, and the results were fantastic!",
-    avatar: "/placeholder.svg?height=40&width=40",
+    avatar: "/placeholder.svg",
   },
 ]
 
