@@ -68,22 +68,63 @@ import {
   Filter,
 } from "lucide-react"
 import { BACKEND_URL } from "@/config"
-import { useRouter } from "next/navigation"
-import { useUser } from "@/utils/isAdmin"
-import { handleLogout } from "@/utils/auth"
-
+import { useDebounce } from "@/utils/search"
 
 const sidebarItems = [
   { title: "Dashboard", url: "/", icon: Home },
-  { title: "Services", url: "/services", icon: Package, active: true },
+  { title: "Services", url: "/services", icon: Package },
   { title: "Bookings", url: "/bookings", icon: Calendar },
   { title: "Customers", url: "/customers", icon: Users },
   { title: "Payments", url: "/payments", icon: CreditCard },
-  { title: "Inventory", url: "/inventory", icon: Warehouse },
+  { title: "Inventory", url: "/inventory", icon: Warehouse, active: true },
   { title: "Reports", url: "/reports", icon: BookOpen },
   { title: "Settings", url: "/settings", icon: Settings },
 ]
 
+
+
+async function handleLogout() {
+  try {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      console.warn("No token found.");
+      return;
+    }
+
+//     const sidebarItems = [
+//   { title: "Dashboard", url: "/", icon: Home },
+//   { title: "Services", url: "/services", icon: Package },
+//   { title: "Bookings", url: "/bookings", icon: Calendar },
+//   { title: "Customers", url: "/customers", icon: Users },
+//   { title: "Payments", url: "/payments", icon: CreditCard },
+//   { title: "Inventory", url: "/inventory", icon: Warehouse, active: true },
+//   { title: "Reports", url: "/reports", icon: BookOpen },
+//   { title: "Settings", url: "/settings", icon: Settings },
+// ]
+
+    const res = await fetch(`${BACKEND_URL}api/logout`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.message || "Logout failed");
+    }
+
+    // Clear token and redirect
+    localStorage.removeItem("token");
+    alert("Logged out successfully!");
+    window.location.href = "/login"; // or use router.push("/login")
+  } catch (error) {
+    console.error("Logout error:", error);
+  }
+}
 
 function AppSidebar() {
   return (
@@ -155,89 +196,59 @@ function AppSidebar() {
 
 export default function BookingsPage() {
 
-  const user = useUser();
-  const router = useRouter();
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [serviceToEdit, setServiceToEdit] = useState<any | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 500);
 
-  const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+
+
+  async function fetchBookings(page = 1, search = searchQuery) {
+    try {
+      const token = localStorage.getItem("token"); // adjust this if you're storing the token differently
+
+      const res = await fetch(
+        `${BACKEND_URL}api/bookings?paginate_count=10&page=${page}&search=${search}`,
+        {
+          method: "GET",
+          headers: {
+
+            Authorization: token ? `Bearer ${token}` : "",
+          },
+        }
+      );
+
+      if (!res.ok) throw new Error("Failed to fetch services");
+
+      const json = await res.json();
+      const bookings = json.data?.data || [];
+      setBookings(bookings);
+
+      console.log("Fetched bookings:", bookings);
+
+
+      setTotalPages(json.data?.last_page || 1);
+      setCurrentPage(json.data?.current_page || 1);
+    } catch (error) {
+      console.error("Error fetching services:", error);
+      setBookings([]);
+    }
+  }
+
+  // Define openEditDialog inside the component
 
   useEffect(() => {
-    if (user === null) return;
-
-    if (user?.data?.role === "admin") {
-      console.log("User is admin:", user.data.role);
-
-      setIsAdmin(true);
+    // When the debounced search term changes, fetch services
+    if (debouncedSearch.trim() !== "") {
+      fetchBookings(1, debouncedSearch);
     } else {
-      setIsAdmin(false);
-      return router.push("/my-bookings");
+      fetchBookings(1); // fetch default services if search is empty
     }
-
-    setLoading(false);
-  }, [user, router]);
-
-  const [bookings, setBookings] = useState([
-    {
-      id: "BK001",
-      service: "Premium Car Wash",
-      customer: {
-        name: "Alice Johnson",
-        email: "alice@example.com",
-        phone: "+1 (555) 123-4567",
-      },
-      date: "2024-01-15",
-      time: "10:00 AM",
-      status: "confirmed",
-      amount: 89.99,
-      address: "123 Main St, City, State 12345",
-      notes: "Customer requested extra attention to interior",
-    },
-    {
-      id: "BK002",
-      service: "Home Cleaning",
-      customer: {
-        name: "Bob Smith",
-        email: "bob@example.com",
-        phone: "+1 (555) 234-5678",
-      },
-      date: "2024-01-15",
-      time: "2:00 PM",
-      status: "pending",
-      amount: 149.99,
-      address: "456 Oak Ave, City, State 12345",
-      notes: "3 bedroom house, focus on kitchen and bathrooms",
-    },
-    {
-      id: "BK003",
-      service: "Garden Maintenance",
-      customer: {
-        name: "Carol Davis",
-        email: "carol@example.com",
-        phone: "+1 (555) 345-6789",
-      },
-      date: "2024-01-16",
-      time: "9:00 AM",
-      status: "completed",
-      amount: 199.99,
-      address: "789 Pine Rd, City, State 12345",
-      notes: "Seasonal cleanup and pruning required",
-    },
-    {
-      id: "BK004",
-      service: "Pet Grooming",
-      customer: {
-        name: "David Wilson",
-        email: "david@example.com",
-        phone: "+1 (555) 456-7890",
-      },
-      date: "2024-01-16",
-      time: "11:30 AM",
-      status: "cancelled",
-      amount: 79.99,
-      address: "321 Elm St, City, State 12345",
-      notes: "Golden Retriever, nail trimming included",
-    },
-  ])
+  }, [debouncedSearch]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -257,16 +268,21 @@ export default function BookingsPage() {
   const getStatusVariant = (status: string) => {
     switch (status) {
       case "completed":
-        return "default"
+        return "default";
       case "confirmed":
-        return "secondary"
+        return "secondary";
       case "pending":
-        return "outline"
+        return "outline";
       case "cancelled":
-        return "destructive"
+        return "destructive";
+      case "paid":
+        return "bg-green-600 text-white";    // Use a supported variant
+      case "unpaid":
+        return "outline";      // Use a supported variant
       default:
-        return "outline"
+        return "outline";
     }
+
   }
 
   return (
@@ -306,7 +322,7 @@ export default function BookingsPage() {
                 <DropdownMenuItem>Profile</DropdownMenuItem>
                 <DropdownMenuItem>Settings</DropdownMenuItem>
                 <DropdownMenuSeparator />
-               <DropdownMenuItem onClick={() => handleLogout()}>Log out</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout}>Log out</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -319,12 +335,7 @@ export default function BookingsPage() {
               <p className="text-muted-foreground">Manage customer appointments and service requests</p>
             </div>
             <Dialog>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  New Booking
-                </Button>
-              </DialogTrigger>
+             
               <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader>
                   <DialogTitle>Create New Booking</DialogTitle>
@@ -456,81 +467,65 @@ export default function BookingsPage() {
                         <TableHead>Date & Time</TableHead>
                         <TableHead>Amount</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+                        <TableHead>Payment Status</TableHead>
+
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {bookings.map((booking) => (
-                        <TableRow key={booking.id}>
-                          <TableCell className="font-medium">{booking.id}</TableCell>
+                        <TableRow key={booking?.id}>
+                          <TableCell className="font-medium">{booking?.id}</TableCell>
                           <TableCell>
                             <div className="flex items-center space-x-3">
                               <Avatar className="h-8 w-8">
                                 <AvatarFallback>
-                                  {booking.customer.name
-                                    .split(" ")
+                                  {booking?.user?.name
+                                    ?.split(" ")
                                     .map((n) => n[0])
                                     .join("")}
                                 </AvatarFallback>
                               </Avatar>
                               <div>
-                                <div className="font-medium">{booking.customer.name}</div>
+                                <div className="font-medium">{booking?.user?.name}</div>
                                 <div className="text-sm text-muted-foreground flex items-center">
                                   <Mail className="mr-1 h-3 w-3" />
-                                  {booking.customer.email}
+                                  {booking?.user?.email}
                                 </div>
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell>{booking.service}</TableCell>
+                          <TableCell>{booking?.service?.name}</TableCell>
                           <TableCell>
                             <div>
-                              <div className="font-medium">{booking.date}</div>
-                              <div className="text-sm text-muted-foreground">{booking.time}</div>
+                              <div className="font-medium">{booking?.booking_date}</div>
+                              {/* If you have time field later, add it here */}
                             </div>
                           </TableCell>
-                          <TableCell>${booking.amount}</TableCell>
+                          <TableCell>${booking?.service?.price ?? "—"}</TableCell>
                           <TableCell>
                             <div className="flex items-center space-x-2">
-                              {getStatusIcon(booking.status)}
-                              <Badge variant={getStatusVariant(booking.status)}>{booking.status}</Badge>
+                              {getStatusIcon(booking?.status)}
+                              <Badge variant={getStatusVariant(booking?.status)}>
+                                {booking?.status}
+                              </Badge>
                             </div>
                           </TableCell>
-                          <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                  <span className="sr-only">Open menu</span>
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuItem>
-                                  <Edit className="mr-2 h-4 w-4" />
-                                  Edit booking
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Mail className="mr-2 h-4 w-4" />
-                                  Send confirmation
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Phone className="mr-2 h-4 w-4" />
-                                  Call customer
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem>View details</DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-red-600">
-                                  <XCircle className="mr-2 h-4 w-4" />
-                                  Cancel booking
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                          <TableCell>
+                            <span
+                              className={`px-2 py-1 rounded text-xs font-medium ${booking?.payment_status === "paid"
+                                ? "bg-green-600 text-white"
+                                : "bg-red-500 text-white"
+                                }`}
+                            >
+                              {booking?.payment_status}
+                            </span>
                           </TableCell>
+
                         </TableRow>
                       ))}
                     </TableBody>
+
+
                   </Table>
                 </CardContent>
               </Card>
@@ -542,36 +537,36 @@ export default function BookingsPage() {
                   <CardTitle>Pending Bookings</CardTitle>
                   <CardDescription>Bookings awaiting confirmation or approval</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {bookings
-                      .filter((b) => b.status === "pending")
-                      .map((booking) => (
-                        <div key={booking.id} className="flex items-center justify-between p-4 border rounded-lg">
-                          <div className="flex items-center space-x-4">
-                            <AlertCircle className="h-5 w-5 text-yellow-500" />
-                            <div>
-                              <p className="font-medium">{booking.service}</p>
-                              <p className="text-sm text-muted-foreground">{booking.customer.name}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {booking.date} at {booking.time}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex space-x-2">
-                            <Button size="sm" variant="outline">
-                              <XCircle className="mr-1 h-3 w-3" />
-                              Decline
-                            </Button>
-                            <Button size="sm">
-                              <CheckCircle className="mr-1 h-3 w-3" />
-                              Confirm
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                </CardContent>
+                {/* <CardContent>
+                                    <div className="space-y-4">
+                                        {bookings
+                                            .filter((b) => b.status === "pending")
+                                            .map((booking) => (
+                                                <div key={booking.id} className="flex items-center justify-between p-4 border rounded-lg">
+                                                    <div className="flex items-center space-x-4">
+                                                        <AlertCircle className="h-5 w-5 text-yellow-500" />
+                                                        <div>
+                                                            <p className="font-medium">{booking.service}</p>
+                                                            <p className="text-sm text-muted-foreground">{booking.customer.name}</p>
+                                                            <p className="text-xs text-muted-foreground">
+                                                                {booking.date} at {booking.time}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex space-x-2">
+                                                        <Button size="sm" variant="outline">
+                                                            <XCircle className="mr-1 h-3 w-3" />
+                                                            Decline
+                                                        </Button>
+                                                        <Button size="sm">
+                                                            <CheckCircle className="mr-1 h-3 w-3" />
+                                                            Confirm
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                    </div>
+                                </CardContent> */}
               </Card>
             </TabsContent>
 
@@ -581,33 +576,33 @@ export default function BookingsPage() {
                   <CardTitle>Confirmed Bookings</CardTitle>
                   <CardDescription>Approved bookings ready for service delivery</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {bookings
-                      .filter((b) => b.status === "confirmed")
-                      .map((booking) => (
-                        <div key={booking.id} className="flex items-center justify-between p-4 border rounded-lg">
-                          <div className="flex items-center space-x-4">
-                            <CheckCircle className="h-5 w-5 text-blue-500" />
-                            <div>
-                              <p className="font-medium">{booking.service}</p>
-                              <p className="text-sm text-muted-foreground">{booking.customer.name}</p>
-                              <p className="text-xs text-muted-foreground flex items-center">
-                                <MapPin className="mr-1 h-3 w-3" />
-                                {booking.address}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-medium">${booking.amount}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {booking.date} at {booking.time}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                </CardContent>
+                {/* <CardContent>
+                                    <div className="space-y-4">
+                                        {bookings
+                                            .filter((b) => b.status === "confirmed")
+                                            .map((booking) => (
+                                                <div key={booking.id} className="flex items-center justify-between p-4 border rounded-lg">
+                                                    <div className="flex items-center space-x-4">
+                                                        <CheckCircle className="h-5 w-5 text-blue-500" />
+                                                        <div>
+                                                            <p className="font-medium">{booking.service}</p>
+                                                            <p className="text-sm text-muted-foreground">{booking.customer.name}</p>
+                                                            <p className="text-xs text-muted-foreground flex items-center">
+                                                                <MapPin className="mr-1 h-3 w-3" />
+                                                                {booking.address}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="font-medium">${booking.amount}</p>
+                                                        <p className="text-sm text-muted-foreground">
+                                                            {booking.date} at {booking.time}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                    </div>
+                                </CardContent> */}
               </Card>
             </TabsContent>
 
@@ -642,6 +637,29 @@ export default function BookingsPage() {
               </Card>
             </TabsContent>
           </Tabs>
+          <div className="flex justify-center items-center space-x-2 mt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchBookings(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </Button>
+
+            <span className="text-sm">
+              Page {currentPage} of {totalPages}
+            </span>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchBookings(currentPage + 1)}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </Button>
+          </div>
         </main>
       </SidebarInset>
     </SidebarProvider>

@@ -14,7 +14,8 @@ class BookingController extends Controller
 {
     public function __construct()
     {
-        $this->middleware(['auth:api', 'admin'])->only(['store', 'update', 'destroy']);
+         $this->middleware('auth:api')->only('store');
+        $this->middleware(['auth:api', 'admin'])->only(['update', 'destroy']);
     }
 
     protected array $typeOfFields = ['textFields', 'numericFields'];
@@ -69,7 +70,7 @@ class BookingController extends Controller
             $status = $validated['status'] ?? null;
             $paymentStatus = $validated['payment_status'] ?? null;
 
-            $query = Booking::with(['service:id,name', 'user'])->orderBy('updated_at', 'desc');
+            $query = Booking::with(['service:id,name,price', 'user'])->orderBy('updated_at', 'desc');
 
             if ($user->role !== 'admin') {
                 $query->where('user_id', $user->id);

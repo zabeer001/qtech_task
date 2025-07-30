@@ -109,7 +109,78 @@ export default function Homepage() {
   //   return matchesCategory && matchesSearch
   // })
 
+  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedTime, setSelectedTime] = useState("");
+
+const handleSubmit = async (service: any) => {
+  const token = localStorage.getItem("token");
+  const formattedBookingDate = `${selectedDate} ${selectedTime}:00`;
+
+  const formData = {
+    service_id: service.id,
+    booking_date: formattedBookingDate,
+  };
+
+  console.log("Submitting booking with data:", formData);
+
+  try {
+    // Step 1: Create Booking (JSON)
+    const res = await fetch(`${BACKEND_URL}api/bookings`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(formData),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.message || "Booking failed");
+
+    const bookingId = data?.data?.id || data?.booking?.id;
+    if (!bookingId) throw new Error("Booking ID not found");
+
+    // Step 2: Prepare FormData for Stripe checkout
+    const checkoutFormData = new FormData();
+    checkoutFormData.append("booking_id", bookingId);
+
+    // Step 3: Call Stripe checkout endpoint with FormData
+    const stripeRes = await fetch(`${BACKEND_URL}api/stripe/checkout`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+        // DO NOT set Content-Type here when using FormData
+      },
+      body: checkoutFormData,
+    });
+
+    const stripeData = await stripeRes.json();
+
+    if (!stripeRes.ok || !stripeData?.checkout_url) {
+      throw new Error(stripeData.message || "Failed to get Stripe checkout URL");
+    }
+
+    console.log("Stripe checkout URL:", stripeData.checkout_url);
+
+    // Step 4: Redirect to Stripe checkout URL
+    window.location.href = stripeData.checkout_url;
+
+  } catch (error) {
+    console.error("Booking error:", error);
+    alert("Failed to book. Please try again.");
+  }
+};
+
+
+
   return (
+
+
+
+
     <div className="min-h-screen bg-white">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white border-b shadow-sm">
@@ -278,7 +349,7 @@ export default function Homepage() {
               <Card key={service.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                 <div className="aspect-video relative">
                   <img
-                   src={(service?.image ? BACKEND_URL + service.image : "/placeholder.svg")}
+                    src={(service?.image ? BACKEND_URL + service.image : "/placeholder.svg")}
                     alt={service.name}
                     className="w-full h-full object-cover"
                   />
@@ -322,42 +393,25 @@ export default function Homepage() {
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[500px]">
                       <DialogHeader>
-                        <DialogTitle>Book {selectedService?.name}</DialogTitle>
+                        <DialogTitle>Book {service?.name}</DialogTitle>
                         <DialogDescription>
-                          Fill in your details to book this service. We'll contact you to confirm the appointment.
+                          Select a preferred date and time. We’ll confirm your appointment shortly.
                         </DialogDescription>
                       </DialogHeader>
                       <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor="firstName">First Name</Label>
-                            <Input id="firstName" placeholder="John" />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="lastName">Last Name</Label>
-                            <Input id="lastName" placeholder="Doe" />
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="email">Email</Label>
-                          <Input id="email" type="email" placeholder="john@example.com" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="phone">Phone</Label>
-                          <Input id="phone" placeholder="+1 (555) 123-4567" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="address">Service Address</Label>
-                          <Input id="address" placeholder="123 Main St, City, State" />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
                             <Label htmlFor="date">Preferred Date</Label>
-                            <Input id="date" type="date" />
+                            <Input
+                              id="date"
+                              type="date"
+                              value={selectedDate}
+                              onChange={(e) => setSelectedDate(e.target.value)}
+                            />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="time">Preferred Time</Label>
-                            <Select>
+                            <Select onValueChange={(value) => setSelectedTime(value)}>
                               <SelectTrigger>
                                 <SelectValue placeholder="Select time" />
                               </SelectTrigger>
@@ -372,22 +426,21 @@ export default function Homepage() {
                             </Select>
                           </div>
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="notes">Special Instructions</Label>
-                          <Textarea id="notes" placeholder="Any special requirements or notes..." />
-                        </div>
+
                         <div className="bg-gray-50 p-4 rounded-lg">
                           <div className="flex justify-between items-center">
                             <span className="font-medium">Service Total:</span>
-                            <span className="text-2xl font-bold text-primary">${selectedService?.price}</span>
+                            <span className="text-2xl font-bold text-primary">
+                              ${service?.price}
+                            </span>
                           </div>
                           <div className="text-sm text-gray-600 mt-1">
-                            Duration: {selectedService?.duration} minutes
+                            Duration: {service?.duration} minutes
                           </div>
                         </div>
                       </div>
                       <DialogFooter>
-                        <Button type="submit" className="w-full">
+                        <Button className="w-full" onClick={() => handleSubmit(service)}>
                           Confirm Booking
                         </Button>
                       </DialogFooter>
