@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   Sidebar,
   SidebarContent,
@@ -64,6 +64,10 @@ import {
   ShoppingCart,
 } from "lucide-react"
 import { handleLogout } from "@/utils/auth"
+
+import { useRouter } from "next/navigation"
+import { useUser } from "@/utils/isAdmin"
+
 
 const sidebarItems = [
   { title: "Dashboard", url: "/", icon: Home },
@@ -145,6 +149,33 @@ function AppSidebar() {
 }
 
 export default function InventoryPage() {
+
+  const user = useUser();
+  const router = useRouter();
+
+  const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (user === null) return;
+
+    if (user?.data?.role === "admin") {
+      console.log("User is admin:", user.data.role);
+
+      setIsAdmin(true);
+    } else {
+      setIsAdmin(false);
+      return router.push("/my-bookings");
+    }
+
+    setLoading(false);
+  }, [user,router]);
+
+
+
+
+
+
   const [inventory, setInventory] = useState([
     {
       id: 1,

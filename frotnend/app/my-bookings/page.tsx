@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import {
   Sidebar,
   SidebarContent,
@@ -68,19 +68,11 @@ import {
   Filter,
 } from "lucide-react"
 import { BACKEND_URL } from "@/config"
-import { useRouter } from "next/navigation"
-import { useUser } from "@/utils/isAdmin"
-
 
 const sidebarItems = [
-  { title: "Dashboard", url: "/", icon: Home },
-  { title: "Services", url: "/services", icon: Package, active: true },
-  { title: "Bookings", url: "/bookings", icon: Calendar },
-  { title: "Customers", url: "/customers", icon: Users },
-  { title: "Payments", url: "/payments", icon: CreditCard },
-  { title: "Inventory", url: "/inventory", icon: Warehouse },
-  { title: "Reports", url: "/reports", icon: BookOpen },
-  { title: "Settings", url: "/settings", icon: Settings },
+
+  { title: "Bookings", url: "/my-bookings", icon: Calendar, active: true },
+ 
 ]
 
 async function handleLogout() {
@@ -92,7 +84,7 @@ async function handleLogout() {
       return;
     }
 
-    const res = await fetch(`${BACKEND_URL}/api/logout`, {
+    const res = await fetch(`${BACKEND_URL}api/logout`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -184,28 +176,6 @@ function AppSidebar() {
 }
 
 export default function BookingsPage() {
-
-  const user = useUser();
-  const router = useRouter();
-
-  const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    if (user === null) return;
-
-    if (user?.data?.role === "admin") {
-      console.log("User is admin:", user.data.role);
-
-      setIsAdmin(true);
-    } else {
-      setIsAdmin(false);
-      return router.push("/my-bookings");
-    }
-
-    setLoading(false);
-  }, [user, router]);
-
   const [bookings, setBookings] = useState([
     {
       id: "BK001",

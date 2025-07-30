@@ -65,6 +65,12 @@ import { handleLogout } from "@/utils/auth"
 import { BACKEND_URL } from "@/config"
 import { toast } from "sonner";
 import { EditServiceDialog } from "./EditServiceDialog"
+import { useDebounce } from "@/utils/search"
+
+import { useRouter } from "next/navigation"
+import { useUser } from "@/utils/isAdmin"
+
+
 
 
 
@@ -163,6 +169,32 @@ export default function ServicesPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [serviceToEdit, setServiceToEdit] = useState<any | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 500);
+
+  const user = useUser();
+  const router = useRouter();
+
+  const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (user === null) return;
+
+    if (user?.data?.role === "admin") {
+      console.log("User is admin:", user.data.role);
+
+      setIsAdmin(true);
+    } else {
+      setIsAdmin(false);
+      return router.push("/unauthorized");
+    }
+
+    setLoading(false);
+  }, [user,router]);
+
 
   function openEditDialog(service: any) {
     setServiceToEdit(service);
@@ -171,19 +203,34 @@ export default function ServicesPage() {
 
 
   // Define fetchServices inside the component
-  async function fetchServices() {
+  async function fetchServices(page = 1, search = searchQuery) {
     try {
-      const res = await fetch(`${BACKEND_URL}api/services?paginate_count=9`);
+      const res = await fetch(
+        `${BACKEND_URL}api/services?paginate_count=10&page=${page}&search=${search}`
+      );
       if (!res.ok) throw new Error("Failed to fetch services");
+
       const json = await res.json();
       const services = json.data?.data || [];
       setServices(services);
+
+      setTotalPages(json.data?.last_page || 1);
+      setCurrentPage(json.data?.current_page || 1);
     } catch (error) {
       console.error("Error fetching services:", error);
       setServices([]);
     }
   }
   // Define openEditDialog inside the component
+
+  useEffect(() => {
+    // When the debounced search term changes, fetch services
+    if (debouncedSearch.trim() !== "") {
+      fetchServices(1, debouncedSearch);
+    } else {
+      fetchServices(1); // fetch default services if search is empty
+    }
+  }, [debouncedSearch]);
 
 
   // Define createService inside the component
@@ -301,6 +348,7 @@ export default function ServicesPage() {
         </header>
 
         <main className="flex-1 space-y-6 p-6">
+
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Services</h1>
@@ -440,19 +488,35 @@ export default function ServicesPage() {
 
           {/* Services Table */}
           <Card>
-            <CardHeader>
-              <CardTitle>All Services</CardTitle>
-              <CardDescription>Manage your service catalog and pricing</CardDescription>
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <CardTitle>All Services</CardTitle>
+                <CardDescription>Manage your service catalog and pricing</CardDescription>
+              </div>
+
+              {/* Search Section */}
+              <div className="flex items-center w-full sm:w-auto gap-2">
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="search"
+                    placeholder="Search services..."
+                    className="pl-8"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && fetchServices(1, searchQuery)}
+                  />
+                </div>
+                <Button onClick={() => fetchServices(1, searchQuery)}>Search</Button>
+              </div>
             </CardHeader>
+
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Service</TableHead>
-
                     <TableHead>Price</TableHead>
-
-
                     <TableHead>Status</TableHead>
                     <TableHead>Image</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -468,15 +532,11 @@ export default function ServicesPage() {
                         </div>
                       </TableCell>
                       <TableCell>${service.price}</TableCell>
-
-
-
-
-
                       <TableCell>
-                        <Badge variant={service.status === "active" ? "default" : "secondary"}>{service.status}</Badge>
+                        <Badge variant={service.status === "active" ? "default" : "secondary"}>
+                          {service.status}
+                        </Badge>
                       </TableCell>
-
                       <TableCell>
                         <img
                           src={service?.image ? `${BACKEND_URL}${service.image}` : "/placeholder.svg"}
@@ -484,8 +544,8 @@ export default function ServicesPage() {
                           className="w-12 h-12 object-cover rounded"
                         />
                       </TableCell>
-
                       <TableCell className="text-right">
+                        {/* Actions Dropdown */}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="h-8 w-8 p-0">
@@ -493,7 +553,6 @@ export default function ServicesPage() {
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
-
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuItem onClick={() => openEditDialog(service)}>
@@ -509,7 +568,6 @@ export default function ServicesPage() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
-
                     </TableRow>
                   ))}
                 </TableBody>
@@ -517,14 +575,39 @@ export default function ServicesPage() {
             </CardContent>
           </Card>
 
+
           {isEditDialogOpen && (
             <EditServiceDialog
               open={isEditDialogOpen}
               onOpenChange={setIsEditDialogOpen}
               service={serviceToEdit}
-              onSave={() => {}} // Not used in your dialog, but required by props
             />
           )}
+
+          <div className="flex justify-center items-center space-x-2 mt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchServices(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </Button>
+
+            <span className="text-sm">
+              Page {currentPage} of {totalPages}
+            </span>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchServices(currentPage + 1)}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </Button>
+          </div>
+
         </main>
       </SidebarInset>
     </SidebarProvider>
