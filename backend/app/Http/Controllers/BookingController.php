@@ -224,7 +224,7 @@ class BookingController extends Controller
     {
         try {
             $validated = $request->validate([
-                'id'     => 'required|integer|exists:services,id',
+                'id'     => 'required|integer',
                 'status' => 'required|string',
             ]);
 

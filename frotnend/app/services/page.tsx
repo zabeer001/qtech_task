@@ -193,7 +193,7 @@ export default function ServicesPage() {
     }
 
     setLoading(false);
-  }, [user,router]);
+  }, [user, router]);
 
 
   function openEditDialog(service: any) {
@@ -306,6 +306,70 @@ export default function ServicesPage() {
       console.error("Error creating service:", err);
     }
   }
+
+  const handleDelete = async (id: number) => {
+    const confirmDelete = window.confirm("Are you sure you want to delete this?");
+    if (!confirmDelete) return;
+
+    try {
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(`${BACKEND_URL}api/services/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ service_id: id }),
+      });
+
+      if (!res.ok) throw new Error("Failed to delete");
+
+      console.log("Deleted successfully");
+
+      // 👇 Efficient state update without re-fetching
+      setServices(prev => prev.filter(service => service.id !== id));
+
+      toast.success("Service deleted successfully!");
+    } catch (err) {
+      console.error("Delete error:", err);
+      toast.error("Failed to delete service");
+    }
+  };
+
+  const handleStatusChange = async (newStatus: string, id: number) => {
+    try {
+      const token = localStorage.getItem("token");
+      const formData = new FormData();
+      formData.append("status", newStatus);
+      formData.append("id", id.toString());
+
+      const res = await fetch(`${BACKEND_URL}api/services/status-update`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error("Failed to update status");
+
+      const response = await res.json();
+      console.log("Status update response:", response);
+
+      toast.success("Status updated successfully!");
+
+      // Optional: re-fetch or update state manually
+      setServices(prev =>
+        prev.map(service =>
+          service.id === id ? { ...service, status: newStatus } : service
+        )
+      );
+    } catch (error) {
+      console.error("Error updating status:", error);
+      toast.error("Failed to update status");
+    }
+  };
 
   return (
     <SidebarProvider>
@@ -532,11 +596,30 @@ export default function ServicesPage() {
                         </div>
                       </TableCell>
                       <TableCell>${service.price}</TableCell>
-                      <TableCell>
-                        <Badge variant={service.status === "active" ? "default" : "secondary"}>
-                          {service.status}
-                        </Badge>
-                      </TableCell>
+
+                    
+<TableCell>
+  <DropdownMenu>
+    <DropdownMenuTrigger asChild>
+      <Button
+        variant="outline"
+        className="text-xs h-7 px-2 py-0 capitalize"
+      >
+        {service.status}
+      </Button>
+    </DropdownMenuTrigger>
+    <DropdownMenuContent>
+      <DropdownMenuItem onClick={() => handleStatusChange("active", service.id)}>
+        Active
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={() => handleStatusChange("inactive", service.id)}>
+        Inactive
+      </DropdownMenuItem>
+    </DropdownMenuContent>
+  </DropdownMenu>
+</TableCell>
+
+
                       <TableCell>
                         <img
                           src={service?.image ? `${BACKEND_URL}${service.image}` : "/placeholder.svg"}
@@ -561,7 +644,7 @@ export default function ServicesPage() {
                             </DropdownMenuItem>
                             <DropdownMenuItem>View bookings</DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-red-600">
+                            <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(service.id)}>
                               <Trash2 className="mr-2 h-4 w-4" />
                               Delete
                             </DropdownMenuItem>
@@ -583,6 +666,8 @@ export default function ServicesPage() {
               service={serviceToEdit}
             />
           )}
+
+          {/* pagination */}
 
           <div className="flex justify-center items-center space-x-2 mt-4">
             <Button

@@ -69,6 +69,7 @@ import {
 } from "lucide-react"
 import { BACKEND_URL } from "@/config"
 import { useDebounce } from "@/utils/search"
+import { toast } from "sonner"
 
 const sidebarItems = [
   { title: "Dashboard", url: "/", icon: Home },
@@ -92,16 +93,16 @@ async function handleLogout() {
       return;
     }
 
-//     const sidebarItems = [
-//   { title: "Dashboard", url: "/", icon: Home },
-//   { title: "Services", url: "/services", icon: Package },
-//   { title: "Bookings", url: "/bookings", icon: Calendar },
-//   { title: "Customers", url: "/customers", icon: Users },
-//   { title: "Payments", url: "/payments", icon: CreditCard },
-//   { title: "Inventory", url: "/inventory", icon: Warehouse, active: true },
-//   { title: "Reports", url: "/reports", icon: BookOpen },
-//   { title: "Settings", url: "/settings", icon: Settings },
-// ]
+    //     const sidebarItems = [
+    //   { title: "Dashboard", url: "/", icon: Home },
+    //   { title: "Services", url: "/services", icon: Package },
+    //   { title: "Bookings", url: "/bookings", icon: Calendar },
+    //   { title: "Customers", url: "/customers", icon: Users },
+    //   { title: "Payments", url: "/payments", icon: CreditCard },
+    //   { title: "Inventory", url: "/inventory", icon: Warehouse, active: true },
+    //   { title: "Reports", url: "/reports", icon: BookOpen },
+    //   { title: "Settings", url: "/settings", icon: Settings },
+    // ]
 
     const res = await fetch(`${BACKEND_URL}api/logout`, {
       method: "POST",
@@ -285,6 +286,41 @@ export default function BookingsPage() {
 
   }
 
+  const handleStatusChange = async (newStatus: string, id: number) => {
+    try {
+      const token = localStorage.getItem("token");
+      const formData = new FormData();
+      formData.append("status", newStatus);
+      formData.append("id", id.toString());
+
+      const res = await fetch(`${BACKEND_URL}api/bookings/status-update`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error("Failed to update status");
+
+      const response = await res.json();
+      console.log("Status update response:", response);
+
+      toast.success("Status updated successfully!");
+
+      // Optional: re-fetch or update state manually
+      setBookings(prev =>
+        prev.map(booking =>
+          booking.id === id ? { ...booking, status: newStatus } : booking
+        )
+      );
+    } catch (error) {
+      console.error("Error updating status:", error);
+      toast.error("Failed to update status");
+    }
+  };
+
+
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -335,7 +371,7 @@ export default function BookingsPage() {
               <p className="text-muted-foreground">Manage customer appointments and service requests</p>
             </div>
             <Dialog>
-             
+
               <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader>
                   <DialogTitle>Create New Booking</DialogTitle>
@@ -502,14 +538,28 @@ export default function BookingsPage() {
                             </div>
                           </TableCell>
                           <TableCell>${booking?.service?.price ?? "—"}</TableCell>
+
                           <TableCell>
-                            <div className="flex items-center space-x-2">
-                              {getStatusIcon(booking?.status)}
-                              <Badge variant={getStatusVariant(booking?.status)}>
-                                {booking?.status}
-                              </Badge>
-                            </div>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  className="text-xs h-7 px-2 py-0 capitalize"
+                                >
+                                  {booking.status}
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent>
+                                <DropdownMenuItem onClick={() => handleStatusChange("confirmed", booking.id)}>
+                                  confirmed
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleStatusChange("pending", booking.id)}>
+                                  pending
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </TableCell>
+
                           <TableCell>
                             <span
                               className={`px-2 py-1 rounded text-xs font-medium ${booking?.payment_status === "paid"

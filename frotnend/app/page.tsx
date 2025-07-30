@@ -39,6 +39,7 @@ import {
 
 import Link from "next/link"
 import { BACKEND_URL } from '../config';
+import { useDebounce } from "@/utils/search";
 
 
 
@@ -73,6 +74,10 @@ export default function Homepage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedService, setSelectedService] = useState<any | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [totalPages, setTotalPages] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
+  const debouncedSearch = useDebounce(searchQuery, 500);
+  
 
   useEffect(() => {
     // Check if the token exists in localStorage
@@ -83,21 +88,34 @@ export default function Homepage() {
   }, []);
 
   // Fetch services on mount
-  useEffect(() => {
-    async function fetchServices() {
-      try {
-        const res = await fetch(`${BACKEND_URL}api/services?paginate_count=9&status=active`);
-        if (!res.ok) throw new Error("Failed to fetch services");
-        const json = await res.json();
-        const services = json.data?.data || [];
-        setServices(services);
-      } catch (error) {
-        console.error("Error fetching services:", error);
-        setServices([]);
-      }
+  async function fetchServices(page = 1, search = searchQuery) {
+    try {
+      const res = await fetch(
+        `${BACKEND_URL}api/services?paginate_count=9&page=${page}&search=${search}&status=active`
+      );
+      if (!res.ok) throw new Error("Failed to fetch services");
+
+      const json = await res.json();
+      const services = json.data?.data || [];
+      setServices(services);
+
+      setTotalPages(json.data?.last_page || 1);
+      setCurrentPage(json.data?.current_page || 1);
+    } catch (error) {
+      console.error("Error fetching services:", error);
+      setServices([]);
     }
-    fetchServices();
-  }, []);
+  }
+  // Define openEditDialog inside the component
+
+  useEffect(() => {
+    // When the debounced search term changes, fetch services
+    if (debouncedSearch.trim() !== "") {
+      fetchServices(1, debouncedSearch);
+    } else {
+      fetchServices(1); // fetch default services if search is empty
+    }
+  }, [debouncedSearch]);
 
   // const categories = ["All", ...new Set(services.map((service) => service.category))];
 
@@ -111,6 +129,9 @@ export default function Homepage() {
 
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
+
+
+
 
   const handleSubmit = async (service: any) => {
     const token = localStorage.getItem("token");
@@ -451,6 +472,30 @@ export default function Homepage() {
               </Card>
             ))}
           </div>
+        </div>
+
+        <div className="flex justify-center items-center space-x-2 mt-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchServices(currentPage - 1)}
+            disabled={currentPage === 1}
+          >
+            Previous
+          </Button>
+
+          <span className="text-sm">
+            Page {currentPage} of {totalPages}
+          </span>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchServices(currentPage + 1)}
+            disabled={currentPage === totalPages}
+          >
+            Next
+          </Button>
         </div>
       </section>
 
