@@ -17,7 +17,7 @@ class BookingController extends Controller
         $this->middleware(['auth:api', 'admin'])->only(['store', 'update', 'destroy']);
     }
 
-    protected array $typeOfFields = ['textFields','numericFields'];
+    protected array $typeOfFields = ['textFields', 'numericFields'];
 
     protected array $textFields = [
         'booking_date',
@@ -45,6 +45,15 @@ class BookingController extends Controller
      */
     public function index(Request $request)
     {
+        $user = JWTAuth::parseToken()->authenticate();
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not authenticated.',
+            ], Response::HTTP_UNAUTHORIZED);
+        }
+        // return $user->role;
+        // if the user->role is admin bring all data else bring only authenticates user's bookings
         try {
             $validated = $request->validate([
                 'paginate_count'      => 'nullable|integer|min:1',
@@ -60,7 +69,11 @@ class BookingController extends Controller
             $status = $validated['status'] ?? null;
             $paymentStatus = $validated['payment_status'] ?? null;
 
-            $query = Booking::with(['service:id,name'])->orderBy('updated_at', 'desc');
+            $query = Booking::with(['service:id,name', 'user'])->orderBy('updated_at', 'desc');
+
+            if ($user->role !== 'admin') {
+                $query->where('user_id', $user->id);
+            }
 
             // Filter by uniq_id
             if ($search) {
@@ -148,7 +161,7 @@ class BookingController extends Controller
     public function show($uniq_id)
     {
         try {
-            $booking = Booking::with(['service','user'])
+            $booking = Booking::with(['service', 'user'])
                 ->where('uniq_id', $uniq_id)
                 ->firstOrFail();
 
@@ -206,7 +219,7 @@ class BookingController extends Controller
         }
     }
 
-     public function udpateStatus(Request $request)
+    public function udpateStatus(Request $request)
     {
         try {
             $validated = $request->validate([

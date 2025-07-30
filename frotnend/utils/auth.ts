@@ -1,36 +1,36 @@
 import { BACKEND_URL } from "@/config";
 
 export async function handleLogout(redirect = true) {
+  const token = localStorage.getItem("token");
+
   try {
-    const token = localStorage.getItem("token");
+    if (token) {
+      const res = await fetch(`${BACKEND_URL}api/logout`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-    if (!token) {
-      console.warn("No token found.");
-      return;
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Logout failed");
+      }
+
+      console.log("Logged out from server.");
+    } else {
+      console.warn("No token found in localStorage.");
     }
-
-    const res = await fetch(`${BACKEND_URL}api/logout`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!res.ok) {
-      const errorData = await res.json();
-      throw new Error(errorData.message || "Logout failed");
-    }
-
-    // Clear token
+  } catch (error) {
+    console.error("Logout error:", error);
+  } finally {
+    // Always remove token and redirect regardless of API result
     localStorage.removeItem("token");
-    console.log("Logged out successfully!");
 
     if (redirect) {
       window.location.href = "/login";
     }
-  } catch (error) {
-    console.error("Logout error:", error);
   }
 }
