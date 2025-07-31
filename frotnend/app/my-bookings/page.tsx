@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import {
     Sidebar,
     SidebarContent,
@@ -13,9 +13,8 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
     SidebarProvider,
-    SidebarTrigger,
+    SidebarInset,
 } from "@/components/ui/sidebar"
-import { SidebarInset } from "@/components/ui/sidebar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -45,54 +44,36 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
     Calendar,
-    Users,
-    DollarSign,
-    Package,
-    Settings,
     Home,
-    BookOpen,
-    CreditCard,
-    Warehouse,
-    Bell,
-    Search,
-    Plus,
-    Edit,
-    MoreHorizontal,
     CheckCircle,
     Clock,
     AlertCircle,
     XCircle,
     Mail,
-    Phone,
-    MapPin,
-    Filter,
 } from "lucide-react"
 import { BACKEND_URL } from "@/config"
 import { useDebounce } from "@/utils/search"
-import { handleLogout } from "@/utils/auth"
 import Header from "@/components/dashboard/layouts/Header"
+
+interface Booking {
+    id: number;
+    status: string;
+    payment_status: string;
+    booking_date?: string;
+    service: {
+        name: string;
+        price?: number;
+    };
+    user: {
+        name: string;
+        email: string;
+    };
+}
 
 const sidebarItems = [
     { title: "Home", url: "/", icon: Home },
-
     { title: "My Bookings", url: "/my-bookings", icon: Calendar, active: true },
-
 ]
-
-// // const sidebarItems = [
-//   { title: "Home", url: "/", icon: Home },
-//   { title: "Services", url: "/services", icon: Package },
-//   { title: "Bookings", url: "/bookings", icon: Calendar },
-//   // { title: "Customers", url: "/customers", icon: Users },
-//   // { title: "Payments", url: "/payments", icon: CreditCard },
-//   { title: "Dashboard", url: "/dashboard", icon: Warehouse },
-//   // { title: "Reports", url: "/reports", icon: BookOpen },
-//   // { title: "Settings", url: "/settings", icon: Settings },
-// ]
-
-
-
-
 
 function AppSidebar() {
     return (
@@ -149,9 +130,6 @@ function AppSidebar() {
                             <DropdownMenuContent side="top" className="w-[--radix-popper-anchor-width]">
                                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem>Profile</DropdownMenuItem>
-                                <DropdownMenuItem>Settings</DropdownMenuItem>
-                                <DropdownMenuSeparator />
                                 <DropdownMenuItem>Sign out</DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
@@ -163,60 +141,48 @@ function AppSidebar() {
 }
 
 export default function BookingsPage() {
-
-    const [bookings, setBookings] = useState<any[]>([]);
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-    const [serviceToEdit, setServiceToEdit] = useState<any | null>(null);
+    const [bookings, setBookings] = useState<Booking[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [searchQuery, setSearchQuery] = useState("");
     const debouncedSearch = useDebounce(searchQuery, 500);
 
+  const fetchBookings = useCallback(async (page = 1, search = searchQuery) => {
+    try {
+        const token = localStorage.getItem("token");
+        const res = await fetch(
+            `${BACKEND_URL}api/bookings?paginate_count=10&page=${page}&search=${search}`,
+            {
+                method: "GET",
+                headers: {
+                    Authorization: token ? `Bearer ${token}` : "",
+                },
+            }
+        );
 
+        if (!res.ok) throw new Error("Failed to fetch bookings");
 
-    async function fetchBookings(page = 1, search = searchQuery) {
-        try {
-            const token = localStorage.getItem("token"); // adjust this if you're storing the token differently
+        const json = await res.json();
+        const bookings: Booking[] = json.data?.data || [];
+        setBookings(bookings);
 
-            const res = await fetch(
-                `${BACKEND_URL}api/bookings?paginate_count=10&page=${page}&search=${search}`,
-                {
-                    method: "GET",
-                    headers: {
+        console.log("Fetched bookings:", bookings);
 
-                        Authorization: token ? `Bearer ${token}` : "",
-                    },
-                }
-            );
-
-            if (!res.ok) throw new Error("Failed to fetch services");
-
-            const json = await res.json();
-            const bookings = json.data?.data || [];
-            setBookings(bookings);
-
-            console.log("Fetched bookings:", bookings);
-
-
-            setTotalPages(json.data?.last_page || 1);
-            setCurrentPage(json.data?.current_page || 1);
-        } catch (error) {
-            console.error("Error fetching services:", error);
-            setBookings([]);
-        }
+        setTotalPages(json.data?.last_page || 1);
+        setCurrentPage(json.data?.current_page || 1);
+    } catch (error) {
+        console.error("Error fetching bookings:", error);
+        setBookings([]);
     }
-
-    // Define openEditDialog inside the component
+}, [setBookings, setCurrentPage, setTotalPages,searchQuery]);
 
     useEffect(() => {
-        // When the debounced search term changes, fetch services
         if (debouncedSearch.trim() !== "") {
             fetchBookings(1, debouncedSearch);
         } else {
-            fetchBookings(1); // fetch default services if search is empty
+            fetchBookings(1);
         }
-    }, [debouncedSearch]);
+    }, [debouncedSearch,fetchBookings]);
 
     const getStatusIcon = (status: string) => {
         switch (status) {
@@ -244,25 +210,26 @@ export default function BookingsPage() {
             case "cancelled":
                 return "destructive";
             case "paid":
-                return "bg-green-600 text-white";    // Use a supported variant
+                return "secondary";
             case "unpaid":
-                return "outline";      // Use a supported variant
+                return "outline";
             default:
                 return "outline";
         }
-
     }
 
     return (
         <SidebarProvider>
             <AppSidebar />
             <SidebarInset>
-               <Header/>
-
-
-              
-
-
+                <Header />
+                <div className="p-6">
+                    <Input 
+                        placeholder="Search bookings..." 
+                        value={searchQuery} 
+                        onChange={(e) => setSearchQuery(e.target.value)} 
+                    />
+                </div>
                 <main className="flex-1 space-y-6 p-6">
                     <div className="flex items-center justify-between">
                         <div>
@@ -270,7 +237,9 @@ export default function BookingsPage() {
                             <p className="text-muted-foreground">Manage customer appointments and service requests</p>
                         </div>
                         <Dialog>
-
+                            <DialogTrigger asChild>
+                                <Button>Create New Booking</Button>
+                            </DialogTrigger>
                             <DialogContent className="sm:max-w-[600px]">
                                 <DialogHeader>
                                     <DialogTitle>Create New Booking</DialogTitle>
@@ -363,7 +332,6 @@ export default function BookingsPage() {
                                 <p className="text-xs text-muted-foreground">Awaiting confirmation</p>
                             </CardContent>
                         </Card>
-
                     </div>
 
                     {/* Bookings Management */}
@@ -392,7 +360,6 @@ export default function BookingsPage() {
                                                 <TableHead>Amount</TableHead>
                                                 <TableHead>Status</TableHead>
                                                 <TableHead>Payment Status</TableHead>
-
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -401,11 +368,12 @@ export default function BookingsPage() {
                                                     <TableCell className="font-medium">{booking?.id}</TableCell>
                                                     <TableCell>
                                                         <div className="flex items-center space-x-3">
-                                                            <Avatar className="h-8 w-8">
+                                                            <Avatar>
+                                                                <AvatarImage src="/placeholder.jpg?height=32&width=32" />
                                                                 <AvatarFallback>
                                                                     {booking?.user?.name
                                                                         ?.split(" ")
-                                                                        .map((n) => n[0])
+                                                                        .map((n: string) => n[0])
                                                                         .join("")}
                                                                 </AvatarFallback>
                                                             </Avatar>
@@ -422,7 +390,6 @@ export default function BookingsPage() {
                                                     <TableCell>
                                                         <div>
                                                             <div className="font-medium">{booking?.booking_date}</div>
-                                                            {/* If you have time field later, add it here */}
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>${booking?.service?.price ?? "—"}</TableCell>
@@ -444,12 +411,9 @@ export default function BookingsPage() {
                                                             {booking?.payment_status}
                                                         </span>
                                                     </TableCell>
-
                                                 </TableRow>
                                             ))}
                                         </TableBody>
-
-
                                     </Table>
                                 </CardContent>
                             </Card>
@@ -461,7 +425,7 @@ export default function BookingsPage() {
                                     <CardTitle>Pending Bookings</CardTitle>
                                     <CardDescription>Bookings awaiting confirmation or approval</CardDescription>
                                 </CardHeader>
-                                {/* <CardContent>
+                                <CardContent>
                                     <div className="space-y-4">
                                         {bookings
                                             .filter((b) => b.status === "pending")
@@ -470,10 +434,10 @@ export default function BookingsPage() {
                                                     <div className="flex items-center space-x-4">
                                                         <AlertCircle className="h-5 w-5 text-yellow-500" />
                                                         <div>
-                                                            <p className="font-medium">{booking.service}</p>
-                                                            <p className="text-sm text-muted-foreground">{booking.customer.name}</p>
+                                                            <p className="font-medium">{booking.service.name}</p>
+                                                            <p className="text-sm text-muted-foreground">{booking.user.name}</p>
                                                             <p className="text-xs text-muted-foreground">
-                                                                {booking.date} at {booking.time}
+                                                                {booking.booking_date}
                                                             </p>
                                                         </div>
                                                     </div>
@@ -490,7 +454,7 @@ export default function BookingsPage() {
                                                 </div>
                                             ))}
                                     </div>
-                                </CardContent> */}
+                                </CardContent>
                             </Card>
                         </TabsContent>
 
@@ -500,7 +464,7 @@ export default function BookingsPage() {
                                     <CardTitle>Confirmed Bookings</CardTitle>
                                     <CardDescription>Approved bookings ready for service delivery</CardDescription>
                                 </CardHeader>
-                                {/* <CardContent>
+                                <CardContent>
                                     <div className="space-y-4">
                                         {bookings
                                             .filter((b) => b.status === "confirmed")
@@ -509,24 +473,23 @@ export default function BookingsPage() {
                                                     <div className="flex items-center space-x-4">
                                                         <CheckCircle className="h-5 w-5 text-blue-500" />
                                                         <div>
-                                                            <p className="font-medium">{booking.service}</p>
-                                                            <p className="text-sm text-muted-foreground">{booking.customer.name}</p>
-                                                            <p className="text-xs text-muted-foreground flex items-center">
-                                                                <MapPin className="mr-1 h-3 w-3" />
-                                                                {booking.address}
+                                                            <p className="font-medium">{booking.service.name}</p>
+                                                            <p className="text-sm text-muted-foreground">{booking.user.name}</p>
+                                                            <p className="text-xs text-muted-foreground">
+                                                                {booking.booking_date}
                                                             </p>
                                                         </div>
                                                     </div>
                                                     <div className="text-right">
-                                                        <p className="font-medium">${booking.amount}</p>
+                                                        <p className="font-medium">${booking.service.price ?? "—"}</p>
                                                         <p className="text-sm text-muted-foreground">
-                                                            {booking.date} at {booking.time}
+                                                            {booking.booking_date}
                                                         </p>
                                                     </div>
                                                 </div>
                                             ))}
                                     </div>
-                                </CardContent> */}
+                                </CardContent>
                             </Card>
                         </TabsContent>
 
@@ -545,13 +508,13 @@ export default function BookingsPage() {
                                                     <div className="flex items-center space-x-4">
                                                         <CheckCircle className="h-5 w-5 text-green-500" />
                                                         <div>
-                                                            <p className="font-medium">{booking.service}</p>
-                                                            <p className="text-sm text-muted-foreground">{booking.customer.name}</p>
-                                                            <p className="text-xs text-muted-foreground">Completed on {booking.date}</p>
+                                                            <p className="font-medium">{booking.service.name}</p>
+                                                            <p className="text-sm text-muted-foreground">{booking.user.name}</p>
+                                                            <p className="text-xs text-muted-foreground">Completed on {booking.booking_date}</p>
                                                         </div>
                                                     </div>
                                                     <div className="text-right">
-                                                        <p className="font-medium text-green-600">${booking.amount}</p>
+                                                        <p className="font-medium text-green-600">${booking.service.price ?? "—"}</p>
                                                         <Badge variant="default">Paid</Badge>
                                                     </div>
                                                 </div>
@@ -570,11 +533,9 @@ export default function BookingsPage() {
                         >
                             Previous
                         </Button>
-
                         <span className="text-sm">
                             Page {currentPage} of {totalPages}
                         </span>
-
                         <Button
                             variant="outline"
                             size="sm"

@@ -1,6 +1,6 @@
-"use client"
+ "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import {
   Sidebar,
   SidebarContent,
@@ -13,7 +13,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
-  SidebarTrigger,
+
 } from "@/components/ui/sidebar"
 import { SidebarInset } from "@/components/ui/sidebar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -31,7 +31,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
@@ -45,32 +44,26 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Calendar,
-  Users,
+
   DollarSign,
   Package,
-  Settings,
+
   Home,
-  BookOpen,
-  CreditCard,
+
   Warehouse,
-  Bell,
+ 
   Search,
-  Plus,
-  Edit,
-  MoreHorizontal,
+
   CheckCircle,
-  Clock,
+
   AlertCircle,
-  XCircle,
+
   Mail,
-  Phone,
-  MapPin,
-  Filter,
+
 } from "lucide-react"
 import { BACKEND_URL } from "@/config"
 import { useDebounce } from "@/utils/search"
 import { toast } from "sonner"
-import { handleLogout } from "@/utils/auth"
 import Header from "@/components/dashboard/layouts/Header"
 
 const sidebarItems = [
@@ -114,7 +107,7 @@ function AppSidebar() {
             <SidebarMenu>
               {sidebarItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={item.active}>
+                  <SidebarMenuButton asChild>
                     <a href={item.url}>
                       <item.icon />
                       <span>{item.title}</span>
@@ -157,10 +150,24 @@ function AppSidebar() {
 
 export default function BookingsPage() {
 
-  const [bookings, setBookings] = useState<any[]>([]);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [serviceToEdit, setServiceToEdit] = useState<any | null>(null);
+  interface Booking {
+    id: number;
+    uniq_id: string;
+    status: string;
+    amount: number;
+    user?: {
+      name: string;
+      email: string;
+    };
+    service?: {
+      name: string;
+      price: number;
+    };
+    booking_date?: string;
+    payment_status?: string;
+  }
+  
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
@@ -168,7 +175,7 @@ export default function BookingsPage() {
 
 
 
-  async function fetchBookings(page = 1, search = searchQuery) {
+  const fetchBookings = useCallback(async (page: number = 1, search: string = searchQuery): Promise<void> => {
     try {
       const token = localStorage.getItem("token"); // adjust this if you're storing the token differently
 
@@ -177,7 +184,6 @@ export default function BookingsPage() {
         {
           method: "GET",
           headers: {
-
             Authorization: token ? `Bearer ${token}` : "",
           },
         }
@@ -191,14 +197,13 @@ export default function BookingsPage() {
 
       console.log("Fetched bookings:", bookings);
 
-
       setTotalPages(json.data?.last_page || 1);
       setCurrentPage(json.data?.current_page || 1);
     } catch (error) {
       console.error("Error fetching services:", error);
       setBookings([]);
     }
-  }
+  }, [searchQuery]);
 
   // Define openEditDialog inside the component
 
@@ -209,42 +214,11 @@ export default function BookingsPage() {
     } else {
       fetchBookings(1); // fetch default services if search is empty
     }
-  }, [debouncedSearch]);
+  }, [debouncedSearch,fetchBookings]);
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "completed":
-        return <CheckCircle className="h-4 w-4 text-green-500" />
-      case "confirmed":
-        return <Clock className="h-4 w-4 text-blue-500" />
-      case "pending":
-        return <AlertCircle className="h-4 w-4 text-yellow-500" />
-      case "cancelled":
-        return <XCircle className="h-4 w-4 text-red-500" />
-      default:
-        return <Clock className="h-4 w-4 text-gray-500" />
-    }
-  }
 
-  const getStatusVariant = (status: string) => {
-    switch (status) {
-      case "completed":
-        return "default";
-      case "confirmed":
-        return "secondary";
-      case "pending":
-        return "outline";
-      case "cancelled":
-        return "destructive";
-      case "paid":
-        return "bg-green-600 text-white";    // Use a supported variant
-      case "unpaid":
-        return "outline";      // Use a supported variant
-      default:
-        return "outline";
-    }
 
-  }
+ 
 
   const handleStatusChange = async (newStatus: string, id: number) => {
     try {
@@ -541,7 +515,7 @@ export default function BookingsPage() {
                                                     <div className="flex items-center space-x-4">
                                                         <AlertCircle className="h-5 w-5 text-yellow-500" />
                                                         <div>
-                                                            <p className="font-medium">{booking.service}</p>
+                                                            <p className="font-medium">{booking.service?.name}</p>
                                                             <p className="text-sm text-muted-foreground">{booking.customer.name}</p>
                                                             <p className="text-xs text-muted-foreground">
                                                                 {booking.date} at {booking.time}
@@ -616,9 +590,9 @@ export default function BookingsPage() {
                           <div className="flex items-center space-x-4">
                             <CheckCircle className="h-5 w-5 text-green-500" />
                             <div>
-                              <p className="font-medium">{booking.service}</p>
-                              <p className="text-sm text-muted-foreground">{booking.customer.name}</p>
-                              <p className="text-xs text-muted-foreground">Completed on {booking.date}</p>
+                                <p className="font-medium">{booking.service?.name}</p>
+                                <p className="text-sm text-muted-foreground">{booking.user?.name}</p>
+                                <p className="text-xs text-muted-foreground">Completed on {booking.booking_date}</p>
                             </div>
                           </div>
                           <div className="text-right">

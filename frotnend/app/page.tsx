@@ -1,7 +1,5 @@
 "use client"
-
-
-import React, { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -17,7 +15,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Calendar,
@@ -28,7 +25,6 @@ import {
   Mail,
   Search,
   ChevronRight,
-  CheckCircle,
   Users,
   Award,
   Shield,
@@ -36,12 +32,10 @@ import {
   Menu,
   X,
 } from "lucide-react"
-
 import Link from "next/link"
-import { BACKEND_URL } from '../config';
-import { useDebounce } from "@/utils/search";
-
-
+import Image from "next/image"
+import { BACKEND_URL } from "../config"
+import { useDebounce } from "@/utils/search"
 
 const testimonials = [
   {
@@ -67,82 +61,105 @@ const testimonials = [
   },
 ]
 
-export default function Homepage() {
-  const [services, setServices] = useState<any[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [selectedService, setSelectedService] = useState<any | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [totalPages, setTotalPages] = useState(1);
-  const [currentPage, setCurrentPage] = useState(1);
-  const debouncedSearch = useDebounce(searchQuery, 500);
+interface Service {
+  id: number
+  name: string
+  description: string
+  category: string
+  price: number
+  duration: number
+  image?: string
+  rating?: number
+  reviews?: number
+}
 
+interface BookingData {
+  service_id: number
+  booking_date: string
+}
+
+export default function Homepage() {
+  const [services, setServices] = useState<Service[]>([])
+  const [searchQuery, setSearchQuery] = useState("")
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [selectedService, setSelectedService] = useState<Service | null>(null)
+  const [totalPages, setTotalPages] = useState(1)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [selectedDate, setSelectedDate] = useState("")
+  const [selectedTime, setSelectedTime] = useState("")
+  const [redirectLink, setRedirectLink] = useState("/login")
+  const [buttonText, setButtonText] = useState("Sign In")
+
+  const debouncedSearch = useDebounce(searchQuery, 500)
+
+  // Fetch services function with useCallback to prevent unnecessary re-renders
+  const fetchServices = useCallback(async (page = 1, search = "") => {
+    try {
+      const res = await fetch(`${BACKEND_URL}api/services?paginate_count=9&page=${page}&search=${search}&status=active`)
+      if (!res.ok) throw new Error("Failed to fetch services")
+      const json = await res.json()
+      const services: Service[] = json.data?.data || []
+      setServices(services)
+      setTotalPages(json.data?.last_page || 1)
+      setCurrentPage(json.data?.current_page || 1)
+    } catch (error) {
+      console.error("Error fetching services:", error)
+      setServices([])
+    }
+  }, [])
 
   useEffect(() => {
     // Check if the token exists in localStorage
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("token")
     if (token) {
-      setIsLoggedIn(true);
+      const fetchUser = async () => {
+        try {
+          const res = await fetch(`${BACKEND_URL}api/me`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: "application/json",
+            },
+          })
+          if (!res.ok) throw new Error("Not authenticated")
+          const json = await res.json()
+          const role = json?.data?.role
+          // Valid user, update button
+          if (role === "admin") {
+            setRedirectLink("/dashboard")
+            setButtonText("Dashboard")
+          } else {
+            setRedirectLink("/my-bookings")
+            setButtonText("Dashboard")
+          }
+        } catch (error) {
+          // Invalid token or error
+          console.error("Auth check failed:", error)
+          setRedirectLink("/login")
+          setButtonText("Sign In")
+        }
+      }
+      fetchUser()
     }
-  }, []);
-
-  // Fetch services on mount
-  async function fetchServices(page = 1, search = searchQuery) {
-    try {
-      const res = await fetch(
-        `${BACKEND_URL}api/services?paginate_count=9&page=${page}&search=${search}&status=active`
-      );
-      if (!res.ok) throw new Error("Failed to fetch services");
-
-      const json = await res.json();
-      const services = json.data?.data || [];
-      setServices(services);
-
-      setTotalPages(json.data?.last_page || 1);
-      setCurrentPage(json.data?.current_page || 1);
-    } catch (error) {
-      console.error("Error fetching services:", error);
-      setServices([]);
-    }
-  }
-  // Define openEditDialog inside the component
+  }, [])
 
   useEffect(() => {
     // When the debounced search term changes, fetch services
     if (debouncedSearch.trim() !== "") {
-      fetchServices(1, debouncedSearch);
+      fetchServices(1, debouncedSearch)
     } else {
-      fetchServices(1); // fetch default services if search is empty
+      fetchServices(1) // fetch default services if search is empty
     }
-  }, [debouncedSearch]);
+  }, [debouncedSearch, fetchServices])
 
-  // const categories = ["All", ...new Set(services.map((service) => service.category))];
-
-  // const filteredServices = services.filter((service) => {
-  //   const matchesCategory = selectedCategory === "All" || service.category === selectedCategory
-  //   const matchesSearch =
-  //     service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-  //     service.description.toLowerCase().includes(searchQuery.toLowerCase())
-  //   return matchesCategory && matchesSearch
-  // })
-
-  const [selectedDate, setSelectedDate] = useState("");
-  const [selectedTime, setSelectedTime] = useState("");
-
-
-
-
-  const handleSubmit = async (service: any) => {
-    const token = localStorage.getItem("token");
-    const formattedBookingDate = `${selectedDate} ${selectedTime}:00`;
-
-    const formData = {
+  const handleSubmit = async (service: Service) => {
+    const token = localStorage.getItem("token")
+    const formattedBookingDate = `${selectedDate} ${selectedTime}:00`
+    const formData: BookingData = {
       service_id: service.id,
       booking_date: formattedBookingDate,
-    };
+    }
 
-    console.log("Submitting booking with data:", formData);
+    console.log("Submitting booking with data:", formData)
 
     try {
       // Step 1: Create Booking (JSON)
@@ -154,18 +171,17 @@ export default function Homepage() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(formData),
-      });
+      })
 
-      const data = await res.json();
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || "Booking failed")
 
-      if (!res.ok) throw new Error(data.message || "Booking failed");
-
-      const bookingId = data?.data?.id || data?.booking?.id;
-      if (!bookingId) throw new Error("Booking ID not found");
+      const bookingId = data?.data?.id || data?.booking?.id
+      if (!bookingId) throw new Error("Booking ID not found")
 
       // Step 2: Prepare FormData for Stripe checkout
-      const checkoutFormData = new FormData();
-      checkoutFormData.append("booking_id", bookingId);
+      const checkoutFormData = new FormData()
+      checkoutFormData.append("booking_id", bookingId)
 
       // Step 3: Call Stripe checkout endpoint with FormData
       const stripeRes = await fetch(`${BACKEND_URL}api/stripe/checkout`, {
@@ -176,71 +192,23 @@ export default function Homepage() {
           // DO NOT set Content-Type here when using FormData
         },
         body: checkoutFormData,
-      });
+      })
 
-      const stripeData = await stripeRes.json();
-
+      const stripeData = await stripeRes.json()
       if (!stripeRes.ok || !stripeData?.checkout_url) {
-        throw new Error(stripeData.message || "Failed to get Stripe checkout URL");
+        throw new Error(stripeData.message || "Failed to get Stripe checkout URL")
       }
 
-      console.log("Stripe checkout URL:", stripeData.checkout_url);
-
+      console.log("Stripe checkout URL:", stripeData.checkout_url)
       // Step 4: Redirect to Stripe checkout URL
-      window.location.href = stripeData.checkout_url;
-
+      window.location.href = stripeData.checkout_url
     } catch (error) {
-      console.error("Booking error:", error);
-      alert("Failed to book. Please try again.");
+      console.error("Booking error:", error)
+      alert("Failed to book. Please try again.")
     }
-  };
-
-  const [redirectLink, setRedirectLink] = useState("/login")
-  const [buttonText, setButtonText] = useState("Sign In")
-
-  useEffect(() => {
-    const token = localStorage.getItem("token")
-    if (!token) return // No token means not logged in
-
-    const fetchUser = async () => {
-      try {
-        const res = await fetch(`${BACKEND_URL}api/me`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/json",
-          },
-        })
-
-        if (!res.ok) throw new Error("Not authenticated")
-
-        const json = await res.json()
-        const role = json?.data?.role
-
-        // Valid user, update button
-        if (role === "admin") {
-          setRedirectLink("/dashboard")
-          setButtonText("Dashboard")
-        } else {
-          setRedirectLink("/my-bookings")
-          setButtonText("Dashboard")
-        }
-      } catch (error) {
-        // Invalid token or error
-        console.error("Auth check failed:", error)
-        setRedirectLink("/login")
-        setButtonText("Sign In")
-      }
-    }
-
-    fetchUser()
-  }, [])
-
+  }
 
   return (
-
-
-
-
     <div className="min-h-screen bg-white">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white border-b shadow-sm">
@@ -271,12 +239,12 @@ export default function Homepage() {
               </a>
             </nav>
 
-
             <div className="hidden md:flex items-center space-x-4">
               <Link href={redirectLink}>
                 <Button>{buttonText}</Button>
               </Link>
             </div>
+
             {/* Mobile menu button */}
             <div className="md:hidden">
               <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
@@ -302,10 +270,9 @@ export default function Homepage() {
                   Contact
                 </a>
                 <div className="flex flex-col space-y-2 px-3 pt-4">
-                  <Button variant="outline" className="w-full bg-transparent">
-                    Sign In
-                  </Button>
-                  <Button className="w-full">Get Started</Button>
+                  <Link href={redirectLink}>
+                    <Button className="w-full">{buttonText}</Button>
+                  </Link>
                 </div>
               </div>
             </div>
@@ -383,18 +350,6 @@ export default function Homepage() {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <div className="flex gap-2 overflow-x-auto">
-              {/* {categories.map((category) => (
-                <Button
-                  key={category}
-                  variant={selectedCategory === category ? "default" : "outline"}
-                  onClick={() => setSelectedCategory(category)}
-                  className="whitespace-nowrap"
-                >
-                  {category}
-                </Button>
-              ))} */}
-            </div>
           </div>
 
           {/* Services Grid */}
@@ -402,10 +357,11 @@ export default function Homepage() {
             {services.map((service) => (
               <Card key={service.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                 <div className="aspect-video relative">
-                  <img
-                    src={(service?.image ? BACKEND_URL + service.image : "/placeholder.jpg")}
+                  <Image
+                    src={service?.image ? BACKEND_URL + service.image : "/placeholder.svg?height=200&width=400"}
                     alt={service.name}
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
                   />
                   <Badge className="absolute top-4 left-4">{service.category}</Badge>
                 </div>
@@ -430,14 +386,6 @@ export default function Homepage() {
                 </CardHeader>
                 <CardContent>
                   <CardDescription className="mb-4">{service?.description}</CardDescription>
-                  {/* <div className="space-y-2 mb-4">
-                    {service.features.map((feature, index) => (
-                      <div key={index} className="flex items-center text-sm">
-                        <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
-                        {feature}
-                      </div>
-                    ))}
-                  </div> */}
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button className="w-full" onClick={() => setSelectedService(service)}>
@@ -447,9 +395,9 @@ export default function Homepage() {
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[500px]">
                       <DialogHeader>
-                        <DialogTitle>Book {service?.name}</DialogTitle>
+                        <DialogTitle>Book {selectedService?.name}</DialogTitle>
                         <DialogDescription>
-                          Select a preferred date and time. We’ll confirm your appointment shortly.
+                          Select a preferred date and time. We&apos;ll confirm your appointment shortly.
                         </DialogDescription>
                       </DialogHeader>
                       <div className="grid gap-4 py-4">
@@ -481,21 +429,18 @@ export default function Homepage() {
                             </Select>
                           </div>
                         </div>
-
                         <div className="bg-gray-50 p-4 rounded-lg">
                           <div className="flex justify-between items-center">
                             <span className="font-medium">Service Total:</span>
-                            <span className="text-2xl font-bold text-primary">
-                              ${service?.price}
-                            </span>
+                            <span className="text-2xl font-bold text-primary">${selectedService?.price}</span>
                           </div>
                           <div className="text-sm text-gray-600 mt-1">
-                            Duration: {service?.duration} minutes
+                            Duration: {selectedService?.duration} minutes
                           </div>
                         </div>
                       </div>
                       <DialogFooter>
-                        <Button className="w-full" onClick={() => handleSubmit(service)}>
+                        <Button className="w-full" onClick={() => selectedService && handleSubmit(selectedService)}>
                           Confirm Booking
                         </Button>
                       </DialogFooter>
@@ -505,30 +450,28 @@ export default function Homepage() {
               </Card>
             ))}
           </div>
-        </div>
 
-        <div className="flex justify-center items-center space-x-2 mt-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => fetchServices(currentPage - 1)}
-            disabled={currentPage === 1}
-          >
-            Previous
-          </Button>
-
-          <span className="text-sm">
-            Page {currentPage} of {totalPages}
-          </span>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => fetchServices(currentPage + 1)}
-            disabled={currentPage === totalPages}
-          >
-            Next
-          </Button>
+          <div className="flex justify-center items-center space-x-2 mt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchServices(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </Button>
+            <span className="text-sm">
+              Page {currentPage} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchServices(currentPage + 1)}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </Button>
+          </div>
         </div>
       </section>
 
@@ -538,7 +481,7 @@ export default function Homepage() {
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Why Choose BookingPro?</h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              We're committed to providing you with the best service experience possible.
+              We&apos;re committed to providing you with the best service experience possible.
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -556,7 +499,7 @@ export default function Homepage() {
                 <Award className="w-8 h-8 text-primary" />
               </div>
               <h3 className="text-xl font-semibold mb-2">Quality Guarantee</h3>
-              <p className="text-gray-600">We guarantee satisfaction with every service or we'll make it right.</p>
+              <p className="text-gray-600">We guarantee satisfaction with every service or we&apos;ll make it right.</p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -575,7 +518,7 @@ export default function Homepage() {
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">What Our Customers Say</h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Don't just take our word for it. Here's what our satisfied customers have to say.
+              Don&apos;t just take our word for it. Here&apos;s what our satisfied customers have to say.
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -587,10 +530,10 @@ export default function Homepage() {
                       <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                     ))}
                   </div>
-                  <p className="text-gray-600 mb-4">"{testimonial.comment}"</p>
+                  <p className="text-gray-600 mb-4">&ldquo;{testimonial.comment}&rdquo;</p>
                   <div className="flex items-center">
                     <Avatar className="h-10 w-10 mr-3">
-                      <AvatarImage src={testimonial.avatar || "/placeholder.jpg"} />
+                      <AvatarImage src={testimonial.avatar || "/placeholder.svg?height=40&width=40"} />
                       <AvatarFallback>
                         {testimonial.name
                           .split(" ")

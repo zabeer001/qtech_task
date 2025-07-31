@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Separator } from "@/components/ui/separator"
 import { Calendar, Eye, EyeOff, Mail, Lock, User } from "lucide-react"
 import { BACKEND_URL } from "@/config"
 import { useRouter } from "next/navigation"
@@ -59,8 +58,12 @@ export default function LoginPage() {
 
       alert("Login successful!")
       router.push("/")
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message)
+      } else {
+        setError("An unexpected error occurred")
+      }
     } finally {
       setLoading(false)
     }
@@ -100,15 +103,15 @@ export default function LoginPage() {
       console.log("Register success:", data)
 
       alert("Registration successful! Please log in.")
-      setTimeout(() => {
-  window.location.reload();
-}, 500);
-
-    } catch (err: any) {
-      setRegisterError(err.message)
-    } finally {
-      setRegisterLoading(false)
-    }
+} catch (err: unknown) {
+  if (err instanceof Error) {
+    setRegisterError(err.message)
+  } else {
+    setRegisterError("An unexpected error occurred")
+  }
+} finally {
+  setRegisterLoading(false)
+}
   }
 
   return (

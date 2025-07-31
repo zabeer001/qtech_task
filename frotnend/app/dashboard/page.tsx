@@ -13,7 +13,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
-  SidebarTrigger,
+ 
 } from "@/components/ui/sidebar"
 import { SidebarInset } from "@/components/ui/sidebar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -44,16 +44,14 @@ import {
 import { Progress } from "@/components/ui/progress"
 import {
   Calendar,
-  Users,
+ 
   DollarSign,
   Package,
-  Settings,
+
   Home,
-  BookOpen,
-  CreditCard,
+
   Warehouse,
-  Bell,
-  Search,
+
   Plus,
   Edit,
   Trash2,
@@ -63,7 +61,7 @@ import {
   Package2,
   ShoppingCart,
 } from "lucide-react"
-import { handleLogout } from "@/utils/auth"
+
 
 import { useRouter } from "next/navigation"
 import { useUser } from "@/utils/isAdmin"
@@ -107,7 +105,7 @@ function AppSidebar() {
             <SidebarMenu>
               {sidebarItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={item.active}>
+                  <SidebarMenuButton asChild>
                     <a href={item.url}>
                       <item.icon />
                       <span>{item.title}</span>
@@ -153,30 +151,32 @@ export default function InventoryPage() {
   const user = useUser();
   const router = useRouter();
 
-  const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+  // Removed unused state variables: loading and isAdmin
+
 
   useEffect(() => {
-    if (user === null) return;
-
-    if (user?.data?.role === "admin") {
-      console.log("User is admin:", user.data.role);
-
-      setIsAdmin(true);
-    } else {
-      setIsAdmin(false);
-      return router.push("/my-bookings");
+    if (user && user.role !== "admin") {
+      router.push("/my-bookings");
     }
-
-    setLoading(false);
   }, [user, router]);
 
 
 
 
 
-
-  const [inventory, setInventory] = useState([
+  const [inventory] = useState<{
+      id: number;
+      name: string;
+      category: string;
+      sku: string;
+      currentStock: number;
+      minStock: number;
+      maxStock: number;
+      unitPrice: number;
+      supplier: string;
+      lastRestocked: string;
+      status: string;
+    }[]>([
     {
       id: 1,
       name: "Car Wash Soap",

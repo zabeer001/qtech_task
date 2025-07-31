@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { SidebarTrigger } from "@/components/ui/sidebar"
+
 import { handleLogout } from "@/utils/auth"
 import { useEffect, useState } from "react"
 import { BACKEND_URL } from "@/config"
@@ -52,7 +52,7 @@ export default function Header() {
   return (
     <header className="flex h-16 shrink-0 items-center justify-between border-b px-4">
       <div className="flex items-center gap-2">
-        <SidebarTrigger className="-ml-1" />
+    
         <h1 className="text-lg font-semibold hidden sm:block">Dashboard</h1>
       </div>
 
@@ -84,7 +84,7 @@ export default function Header() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
          
-            <DropdownMenuItem onClick={handleLogout}>Log out</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleLogout()}>Log out</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
