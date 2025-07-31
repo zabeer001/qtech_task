@@ -67,19 +67,19 @@ import { handleLogout } from "@/utils/auth"
 
 import { useRouter } from "next/navigation"
 import { useUser } from "@/utils/isAdmin"
+import Header from "@/components/dashboard/layouts/Header"
 
 
 const sidebarItems = [
-  { title: "Dashboard", url: "/", icon: Home },
-  { title: "Services", url: "/services", icon: Package },
+  { title: "Home", url: "/", icon: Home },
+  { title: "Services", url: "/services", icon: Package, active: true },
   { title: "Bookings", url: "/bookings", icon: Calendar },
-  { title: "Customers", url: "/customers", icon: Users },
-  { title: "Payments", url: "/payments", icon: CreditCard },
-  { title: "Inventory", url: "/inventory", icon: Warehouse, active: true },
-  { title: "Reports", url: "/reports", icon: BookOpen },
-  { title: "Settings", url: "/settings", icon: Settings },
+  // { title: "Customers", url: "/customers", icon: Users },
+  // { title: "Payments", url: "/payments", icon: CreditCard },
+  { title: "Dashboard", url: "/dashboard", icon: Warehouse },
+  // { title: "Reports", url: "/reports", icon: BookOpen },
+  // { title: "Settings", url: "/settings", icon: Settings },
 ]
-
 function AppSidebar() {
   return (
     <Sidebar>
@@ -126,7 +126,7 @@ function AppSidebar() {
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton>
                   <Avatar className="h-6 w-6">
-                    <AvatarImage src="/placeholder.svg?height=24&width=24" />
+                    <AvatarImage src="/placeholder.jpg?height=24&width=24" />
                     <AvatarFallback>JD</AvatarFallback>
                   </Avatar>
                   <span>John Doe</span>
@@ -169,7 +169,7 @@ export default function InventoryPage() {
     }
 
     setLoading(false);
-  }, [user,router]);
+  }, [user, router]);
 
 
 
@@ -282,41 +282,7 @@ export default function InventoryPage() {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-          <SidebarTrigger className="-ml-1" />
-          <div className="flex flex-1 items-center gap-2">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input type="search" placeholder="Search inventory..." className="pl-8" />
-            </div>
-            <Button variant="outline" size="icon">
-              <Bell className="h-4 w-4" />
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src="/placeholder.svg?height=32&width=32" alt="@johndoe" />
-                    <AvatarFallback>JD</AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end" forceMount>
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">John Doe</p>
-                    <p className="text-xs leading-none text-muted-foreground">john@example.com</p>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>Profile</DropdownMenuItem>
-                <DropdownMenuItem>Settings</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => handleLogout()}>Log out</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </header>
+              <Header/>
 
         <main className="flex-1 space-y-6 p-6">
           <div className="flex items-center justify-between">

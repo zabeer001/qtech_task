@@ -69,46 +69,30 @@ import {
 } from "lucide-react"
 import { BACKEND_URL } from "@/config"
 import { useDebounce } from "@/utils/search"
+import { handleLogout } from "@/utils/auth"
+import Header from "@/components/dashboard/layouts/Header"
 
 const sidebarItems = [
+    { title: "Home", url: "/", icon: Home },
 
     { title: "My Bookings", url: "/my-bookings", icon: Calendar, active: true },
 
 ]
 
+// // const sidebarItems = [
+//   { title: "Home", url: "/", icon: Home },
+//   { title: "Services", url: "/services", icon: Package, active: true },
+//   { title: "Bookings", url: "/bookings", icon: Calendar },
+//   // { title: "Customers", url: "/customers", icon: Users },
+//   // { title: "Payments", url: "/payments", icon: CreditCard },
+//   { title: "Dashboard", url: "/dashboard", icon: Warehouse },
+//   // { title: "Reports", url: "/reports", icon: BookOpen },
+//   // { title: "Settings", url: "/settings", icon: Settings },
+// ]
 
 
-async function handleLogout() {
-    try {
-        const token = localStorage.getItem("token");
 
-        if (!token) {
-            console.warn("No token found.");
-            return;
-        }
 
-        const res = await fetch(`${BACKEND_URL}api/logout`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Accept: "application/json",
-                Authorization: `Bearer ${token}`,
-            },
-        });
-
-        if (!res.ok) {
-            const errorData = await res.json();
-            throw new Error(errorData.message || "Logout failed");
-        }
-
-        // Clear token and redirect
-        localStorage.removeItem("token");
-        alert("Logged out successfully!");
-        window.location.href = "/login"; // or use router.push("/login")
-    } catch (error) {
-        console.error("Logout error:", error);
-    }
-}
 
 function AppSidebar() {
     return (
@@ -156,7 +140,7 @@ function AppSidebar() {
                             <DropdownMenuTrigger asChild>
                                 <SidebarMenuButton>
                                     <Avatar className="h-6 w-6">
-                                        <AvatarImage src="/placeholder.svg?height=24&width=24" />
+                                        <AvatarImage src="/placeholder.jpg?height=24&width=24" />
                                         <AvatarFallback>JD</AvatarFallback>
                                     </Avatar>
                                     <span>John Doe</span>
@@ -273,44 +257,11 @@ export default function BookingsPage() {
         <SidebarProvider>
             <AppSidebar />
             <SidebarInset>
-                <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-                    <SidebarTrigger className="-ml-1" />
-                    <div className="flex flex-1 items-center gap-2">
-                        <div className="relative flex-1 max-w-md">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input type="search" placeholder="Search bookings..." className="pl-8" />
-                        </div>
-                        <Button variant="outline" size="icon">
-                            <Filter className="h-4 w-4" />
-                        </Button>
-                        <Button variant="outline" size="icon">
-                            <Bell className="h-4 w-4" />
-                        </Button>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                                    <Avatar className="h-8 w-8">
-                                        <AvatarImage src="/placeholder.svg?height=32&width=32" alt="@johndoe" />
-                                        <AvatarFallback>JD</AvatarFallback>
-                                    </Avatar>
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent className="w-56" align="end" forceMount>
-                                <DropdownMenuLabel className="font-normal">
-                                    <div className="flex flex-col space-y-1">
-                                        <p className="text-sm font-medium leading-none">John Doe</p>
-                                        <p className="text-xs leading-none text-muted-foreground">john@example.com</p>
-                                    </div>
-                                </DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem>Profile</DropdownMenuItem>
-                                <DropdownMenuItem>Settings</DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={handleLogout}>Log out</DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </div>
-                </header>
+               <Header/>
+
+
+              
+
 
                 <main className="flex-1 space-y-6 p-6">
                     <div className="flex items-center justify-between">
@@ -319,7 +270,7 @@ export default function BookingsPage() {
                             <p className="text-muted-foreground">Manage customer appointments and service requests</p>
                         </div>
                         <Dialog>
-                           
+
                             <DialogContent className="sm:max-w-[600px]">
                                 <DialogHeader>
                                     <DialogTitle>Create New Booking</DialogTitle>
@@ -412,7 +363,7 @@ export default function BookingsPage() {
                                 <p className="text-xs text-muted-foreground">Awaiting confirmation</p>
                             </CardContent>
                         </Card>
-                        
+
                     </div>
 
                     {/* Bookings Management */}
@@ -486,8 +437,8 @@ export default function BookingsPage() {
                                                     <TableCell>
                                                         <span
                                                             className={`px-2 py-1 rounded text-xs font-medium ${booking?.payment_status === "paid"
-                                                                    ? "bg-green-600 text-white"
-                                                                    : "bg-red-500 text-white"
+                                                                ? "bg-green-600 text-white"
+                                                                : "bg-red-500 text-white"
                                                                 }`}
                                                         >
                                                             {booking?.payment_status}

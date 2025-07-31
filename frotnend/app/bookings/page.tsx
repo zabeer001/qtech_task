@@ -70,62 +70,22 @@ import {
 import { BACKEND_URL } from "@/config"
 import { useDebounce } from "@/utils/search"
 import { toast } from "sonner"
+import { handleLogout } from "@/utils/auth"
+import Header from "@/components/dashboard/layouts/Header"
 
 const sidebarItems = [
-  { title: "Dashboard", url: "/", icon: Home },
-  { title: "Services", url: "/services", icon: Package },
+  { title: "Home", url: "/", icon: Home },
+  { title: "Services", url: "/services", icon: Package, active: true },
   { title: "Bookings", url: "/bookings", icon: Calendar },
-  { title: "Customers", url: "/customers", icon: Users },
-  { title: "Payments", url: "/payments", icon: CreditCard },
-  { title: "Inventory", url: "/inventory", icon: Warehouse, active: true },
-  { title: "Reports", url: "/reports", icon: BookOpen },
-  { title: "Settings", url: "/settings", icon: Settings },
+  // { title: "Customers", url: "/customers", icon: Users },
+  // { title: "Payments", url: "/payments", icon: CreditCard },
+  { title: "Dashboard", url: "/dashboard", icon: Warehouse },
+  // { title: "Reports", url: "/reports", icon: BookOpen },
+  // { title: "Settings", url: "/settings", icon: Settings },
 ]
 
 
 
-async function handleLogout() {
-  try {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-      console.warn("No token found.");
-      return;
-    }
-
-    //     const sidebarItems = [
-    //   { title: "Dashboard", url: "/", icon: Home },
-    //   { title: "Services", url: "/services", icon: Package },
-    //   { title: "Bookings", url: "/bookings", icon: Calendar },
-    //   { title: "Customers", url: "/customers", icon: Users },
-    //   { title: "Payments", url: "/payments", icon: CreditCard },
-    //   { title: "Inventory", url: "/inventory", icon: Warehouse, active: true },
-    //   { title: "Reports", url: "/reports", icon: BookOpen },
-    //   { title: "Settings", url: "/settings", icon: Settings },
-    // ]
-
-    const res = await fetch(`${BACKEND_URL}api/logout`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!res.ok) {
-      const errorData = await res.json();
-      throw new Error(errorData.message || "Logout failed");
-    }
-
-    // Clear token and redirect
-    localStorage.removeItem("token");
-    alert("Logged out successfully!");
-    window.location.href = "/login"; // or use router.push("/login")
-  } catch (error) {
-    console.error("Logout error:", error);
-  }
-}
 
 function AppSidebar() {
   return (
@@ -173,7 +133,7 @@ function AppSidebar() {
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton>
                   <Avatar className="h-6 w-6">
-                    <AvatarImage src="/placeholder.svg?height=24&width=24" />
+                    <AvatarImage src="/placeholder.jpg?height=24&width=24" />
                     <AvatarFallback>JD</AvatarFallback>
                   </Avatar>
                   <span>John Doe</span>
@@ -203,7 +163,7 @@ export default function BookingsPage() {
   const [serviceToEdit, setServiceToEdit] = useState<any | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-   const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebounce(searchQuery, 500);
 
 
@@ -325,44 +285,9 @@ export default function BookingsPage() {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-          <SidebarTrigger className="-ml-1" />
-          <div className="flex flex-1 items-center gap-2">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input type="search" placeholder="Search bookings..." className="pl-8" />
-            </div>
-            <Button variant="outline" size="icon">
-              <Filter className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="icon">
-              <Bell className="h-4 w-4" />
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src="/placeholder.svg?height=32&width=32" alt="@johndoe" />
-                    <AvatarFallback>JD</AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end" forceMount>
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">John Doe</p>
-                    <p className="text-xs leading-none text-muted-foreground">john@example.com</p>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>Profile</DropdownMenuItem>
-                <DropdownMenuItem>Settings</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout}>Log out</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </header>
+             <Header/>
+       
+
 
         <main className="flex-1 space-y-6 p-6">
           <div className="flex items-center justify-between">
@@ -490,9 +415,27 @@ export default function BookingsPage() {
             <TabsContent value="all" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>All Bookings</CardTitle>
-                  <CardDescription>Complete list of customer bookings and appointments</CardDescription>
-                  
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full gap-4">
+                    <div>
+                      <CardTitle>All Bookings</CardTitle>
+                      <CardDescription>Complete list of customer bookings and appointments</CardDescription>
+                    </div>
+
+                    <div className="flex items-center gap-2 w-full sm:w-auto sm:justify-end">
+                      <div className="relative w-full sm:w-64">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          type="search"
+                          placeholder="Search services..."
+                          className="pl-8"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && fetchBookings(1, searchQuery)}
+                        />
+                      </div>
+                      <Button onClick={() => fetchBookings(1, searchQuery)}>Search</Button>
+                    </div>
+                  </div>
                 </CardHeader>
 
                 <CardContent>
@@ -512,7 +455,7 @@ export default function BookingsPage() {
                     <TableBody>
                       {bookings.map((booking) => (
                         <TableRow key={booking?.id}>
-                          <TableCell className="font-medium">{booking?.id}</TableCell>
+                          <TableCell className="font-medium">{booking?.uniq_id}</TableCell>
                           <TableCell>
                             <div className="flex items-center space-x-3">
                               <Avatar className="h-8 w-8">

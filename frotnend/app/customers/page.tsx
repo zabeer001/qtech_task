@@ -119,7 +119,7 @@ function AppSidebar() {
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton>
                   <Avatar className="h-6 w-6">
-                    <AvatarImage src="/placeholder.svg?height=24&width=24" />
+                    <AvatarImage src="/placeholder.jpg?height=24&width=24" />
                     <AvatarFallback>JD</AvatarFallback>
                   </Avatar>
                   <span>John Doe</span>
@@ -215,7 +215,7 @@ export default function CustomersPage() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src="/placeholder.svg?height=32&width=32" alt="@johndoe" />
+                    <AvatarImage src="/placeholder.jpg?height=32&width=32" alt="@johndoe" />
                     <AvatarFallback>JD</AvatarFallback>
                   </Avatar>
                 </Button>

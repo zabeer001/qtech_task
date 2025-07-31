@@ -14,7 +14,7 @@ class BookingController extends Controller
 {
     public function __construct()
     {
-         $this->middleware('auth:api')->only('store');
+        $this->middleware('auth:api')->only('store');
         $this->middleware(['auth:api', 'admin'])->only(['update', 'destroy']);
     }
 
@@ -35,7 +35,7 @@ class BookingController extends Controller
     {
         return $request->validate([
             'service_id'     => 'required|integer|exists:services,id',
-          'booking_date' => ['required', 'date', 'after_or_equal:today'],
+            'booking_date' => ['required', 'date', 'after_or_equal:today'],
             'status'         => 'nullable|string',
             'payment_status' => 'nullable|string',
         ]);
@@ -78,7 +78,15 @@ class BookingController extends Controller
 
             // Filter by uniq_id
             if ($search) {
-                $query->where('uniq_id', 'like', $search . '%');
+                $query->where(function ($q) use ($search) {
+                    $q->where('uniq_id', 'like', $search . '%')
+                        ->orWhereHas('user', function ($uq) use ($search) {
+                            $uq->where('email', 'like', $search . '%');
+                        })
+                        ->orWhereHas('service', function ($sq) use ($search) {
+                            $sq->where('name', 'like', $search . '%');
+                        });
+                });
             }
 
             // Filter by service name

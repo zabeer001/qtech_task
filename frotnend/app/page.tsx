@@ -49,21 +49,21 @@ const testimonials = [
     service: "Home Deep Cleaning",
     rating: 5,
     comment: "Absolutely amazing service! My house has never been cleaner. The team was professional and thorough.",
-    avatar: "/placeholder.svg",
+    avatar: "/placeholder.jpg",
   },
   {
     name: "Mike Chen",
     service: "Premium Car Wash",
     rating: 5,
     comment: "My car looks brand new! Great attention to detail and excellent customer service.",
-    avatar: "/placeholder.svg",
+    avatar: "/placeholder.jpg",
   },
   {
     name: "Emily Davis",
     service: "Pet Grooming",
     rating: 5,
     comment: "They took such good care of my dog. Professional, gentle, and the results were fantastic!",
-    avatar: "/placeholder.svg",
+    avatar: "/placeholder.jpg",
   },
 ]
 
@@ -77,7 +77,7 @@ export default function Homepage() {
   const [totalPages, setTotalPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
   const debouncedSearch = useDebounce(searchQuery, 500);
-  
+
 
   useEffect(() => {
     // Check if the token exists in localStorage
@@ -195,6 +195,45 @@ export default function Homepage() {
     }
   };
 
+  const [redirectLink, setRedirectLink] = useState("/login")
+  const [buttonText, setButtonText] = useState("Sign In")
+
+  useEffect(() => {
+    const token = localStorage.getItem("token")
+    if (!token) return // No token means not logged in
+
+    const fetchUser = async () => {
+      try {
+        const res = await fetch(`${BACKEND_URL}api/me`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
+        })
+
+        if (!res.ok) throw new Error("Not authenticated")
+
+        const json = await res.json()
+        const role = json?.data?.role
+
+        // Valid user, update button
+        if (role === "admin") {
+          setRedirectLink("/dashboard")
+          setButtonText("Dashboard")
+        } else {
+          setRedirectLink("/my-bookings")
+          setButtonText("Dashboard")
+        }
+      } catch (error) {
+        // Invalid token or error
+        console.error("Auth check failed:", error)
+        setRedirectLink("/login")
+        setButtonText("Sign In")
+      }
+    }
+
+    fetchUser()
+  }, [])
 
 
   return (
@@ -234,15 +273,9 @@ export default function Homepage() {
 
 
             <div className="hidden md:flex items-center space-x-4">
-              {isLoggedIn ? (
-                <Link href="/dashboard">
-                  <Button>Dashboard</Button>
-                </Link>
-              ) : (
-                <Link href="/login">
-                  <Button>Sign In</Button>
-                </Link>
-              )}
+              <Link href={redirectLink}>
+                <Button>{buttonText}</Button>
+              </Link>
             </div>
             {/* Mobile menu button */}
             <div className="md:hidden">
@@ -370,7 +403,7 @@ export default function Homepage() {
               <Card key={service.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                 <div className="aspect-video relative">
                   <img
-                    src={(service?.image ? BACKEND_URL + service.image : "/placeholder.svg")}
+                    src={(service?.image ? BACKEND_URL + service.image : "/placeholder.jpg")}
                     alt={service.name}
                     className="w-full h-full object-cover"
                   />
@@ -557,7 +590,7 @@ export default function Homepage() {
                   <p className="text-gray-600 mb-4">"{testimonial.comment}"</p>
                   <div className="flex items-center">
                     <Avatar className="h-10 w-10 mr-3">
-                      <AvatarImage src={testimonial.avatar || "/placeholder.svg"} />
+                      <AvatarImage src={testimonial.avatar || "/placeholder.jpg"} />
                       <AvatarFallback>
                         {testimonial.name
                           .split(" ")
