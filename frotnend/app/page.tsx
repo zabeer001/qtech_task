@@ -358,7 +358,7 @@ export default function Homepage() {
               <Card key={service.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                 <div className="aspect-video relative">
                   <Image
-                    src={service?.image ? BACKEND_URL + service.image : "/placeholder.svg?height=200&width=400"}
+                    src={service?.image ? BACKEND_URL + service.image : "/placeholder.jpg"}
                     alt={service.name}
                     fill
                     className="object-cover"
