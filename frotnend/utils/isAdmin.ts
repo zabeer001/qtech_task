@@ -33,9 +33,17 @@ export function useUser() {
           return;
         }
 
-        const data = await res.json();
-        setUser(data); // return the full user object
-      } catch {
+        // Parse the response and extract the data
+        const responseData = await res.json();
+        const userData: User = responseData.data; // Ensure data matches User interface
+
+      console.log('usDDDDDDDDDaaaaaaaaaaattttttttt');
+      
+        console.log(userData);
+        
+        setUser(userData); // Set the user data
+      } catch (error) {
+        console.error("Failed to fetch user:", error);
         setUser(null);
       }
     }

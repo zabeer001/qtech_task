@@ -32,14 +32,16 @@ export default function Header() {
         },
       })
 
+      const json = await res.json()
+
       if (!res.ok) {
-        const errorData = await res.json()
-        throw new Error(errorData.message || "Failed to fetch user data")
+        throw new Error(json.message || "Failed to fetch user data")
       }
 
-      const json = await res.json()
+      console.log("Fetched user name:", json.data.name)
+
       const { name, email } = json.data
-      setProfile({ name, email }) // Set the profile directly here
+      setProfile({ name, email }) // Set profile here
     } catch (error) {
       console.error("Error fetching user profile:", error)
     }
@@ -52,7 +54,6 @@ export default function Header() {
   return (
     <header className="flex h-16 shrink-0 items-center justify-between border-b px-4">
       <div className="flex items-center gap-2">
-    
         <h1 className="text-lg font-semibold hidden sm:block">Dashboard</h1>
       </div>
 
@@ -83,7 +84,6 @@ export default function Header() {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-         
             <DropdownMenuItem onClick={() => handleLogout()}>Log out</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
