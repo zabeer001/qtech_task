@@ -1,0 +1,39 @@
+Bonus Features
+------------------- SYSTEM DESIGN -------------------------------
+observations:
+1.  when the service grows there will be HTTP requiest burst-->>
+
+    possible request burst  
+    *** booking system****.
+    too many users wants to book in a single time. 
+
+    USE_CASE: foodpanda delivery service
+
+    for the request burst 
+    1. best approach is to take that service in node express.
+    
+    WHY Node EXPRESS: 
+
+    1. This service will be made with asyncronus architechture. 
+    2. the node express app in later will be hosted with Serverless Architechture. 
+    3. REAL TIME NOTIFICATIONS is a real time thing. It will be done in Express.
+    but laravel has an option with pusher js. right now we are thinking the application will be used by too many people that the cost of PUSHER js will be HIGHER than our expectation.  
+    
+    Laravel Solution: 
+    1. the HTTP requests in a queue.    
+
+WHY WE ARE USING Laravel:
+
+for the low load features will be in laravel cz company can build it in a short time. Lauch the faster than the competitors. The low load features will be in laravel with out the serverless architechture to minimize the cost. 
+
+Final Verdict:
+
+---------------Microservice Architechture------------------
+
+1. auth (Laravel)
+2. service (Laravel)
+3. Booking (Node Express) (mail , pdf invoice)/ threadpoll will be used/.. table partioning for large table by atlas shard mongodb. 
+
+4. payment (Node Express) 
+5. Notifications (Node Express)
+6. File base chaching system 
