@@ -81,7 +81,7 @@ const sidebarItems = [
 
 // // const sidebarItems = [
 //   { title: "Home", url: "/", icon: Home },
-//   { title: "Services", url: "/services", icon: Package, active: true },
+//   { title: "Services", url: "/services", icon: Package },
 //   { title: "Bookings", url: "/bookings", icon: Calendar },
 //   // { title: "Customers", url: "/customers", icon: Users },
 //   // { title: "Payments", url: "/payments", icon: CreditCard },
