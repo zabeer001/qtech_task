@@ -1,6 +1,6 @@
 LIVE:
 
-frontend:(NEXT JS)
+frontend:(NEXT JS, [SHAD CN, TAILWIND , TYPESCRIPTS])
 https://qtech-frontend.vercel.app
 
 backend:(LARAVEL)
